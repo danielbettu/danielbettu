@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from scipy.fft import fft, fftfreq
 
 # Carregar os dados do arquivo .xlsx usando o pacote pandas com o motor 'openpyxl'
-df = pd.read_excel('/home/bettu/Documents/Python/teste_fft.xlsx', engine='openpyxl')
+df = pd.read_excel('c:\Python\p_lutite.xlsx', engine='openpyxl')
 
 # Definir as unidades das colunas
 age_unit = 'Years'
@@ -46,15 +46,19 @@ power = np.abs(fft_values) ** 2
 positive_freqs = freqs[:n//2]
 positive_power = power[:n//2]
 
-# Plotar a potência versus a duração dos ciclos até 150000 anos
+# Remover a componente de frequência zero
+positive_freqs = positive_freqs[1:]
+positive_power = positive_power[1:]
+
+# Plotar a potência versus a duração dos ciclos até 300000 anos
 cycle_duration = 1 / positive_freqs  # Duração dos ciclos (reciprocals das frequências)
 plt.figure(figsize=(20, 11))
 plt.plot(cycle_duration, positive_power)
-plt.xlim(0,150000)
-plt.ylim(0, 5)
+plt.xlim(0,300000)
+plt.ylim(0, 2.5)
 plt.xlabel('Cycle Duration ({})'.format(age_unit))
 plt.ylabel('Power')
-plt.title('Power Spectrum (Cycles up to 150,000 Years)')
+plt.title('Power Spectrum (Cycles up to 300,000 Years)')
 plt.grid(True)
 plt.show()
 
@@ -62,3 +66,15 @@ plt.show()
 print("Cycles and Power:")
 for cycle, power in zip(cycle_duration, positive_power):
     print("Cycle Duration: {:.2f} {} | Power: {:.2f}".format(cycle, age_unit, power))
+    
+    
+# Plotar o espectro de potência versus a frequência do ciclo
+plt.figure(figsize=(10, 6))
+plt.plot(positive_freqs, positive_power)
+plt.xlabel('Cycle Frequency')
+plt.ylabel('Power Spectrum')
+plt.title('Power Spectrum')
+plt.grid(True)
+plt.show()
+
+
