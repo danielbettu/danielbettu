@@ -9,12 +9,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import math
-from regressao import perform_linear_regression
+import statistics
+#from regressao import perform_linear_regression
 from gardner_correl import perform_gardner_correl
 
 
 # Carregar dados do arquivo de entrada em txt
-df = pd.read_csv('C:/Python/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
+df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
+
 
 # Criando o dataframe 'dados' com os dados numéricos
 dados = df.iloc[1:].apply(pd.to_numeric, errors='coerce')
@@ -35,6 +37,7 @@ dens_formacao = perform_gardner_correl(dados.iloc[:,1], coef_a, coef_b)
 
 # Plotar resultado da densidade da fm
 profundidade = dados.loc[:, 0]
+
 # plt.plot(profundidade, dens_formacao)
 # plt.show()
 
@@ -62,21 +65,24 @@ espessura_camada.iloc[-1] = profundidade.iloc[-1] - profundidade.iloc[-2]
 
 tensao_camada = 1.422 * (espessura_camada * dens_formacao)
 tensao_lamina_agua = 1.422 * (lamina_agua * dens_agua)
-tensao_total = tensao_lamina_agua + tensao_camada.cumsum() 
-gradiente_sobrecarga = tensao_total / (0.1704 * profundidade)
+tensao_sobrecarga = tensao_lamina_agua + tensao_camada.cumsum() 
+gradiente_sobrecarga = tensao_sobrecarga / (0.1704 * profundidade)
 
 # Plotar 
 #plt.plot(profundidade, gradiente_sobrecarga)  
 #plt.xlabel('Profundidade (m)')
 #plt.ylabel('Gradiente sobrecarga (lbf/gal)')
 
-###################
-# Cálculo da tendência linear de compactação
+#################### Cálculo da tendência linear de compactação
 # Encontrar o índice da menor profundidade até 'topo_subcomp'
 indices = (dados.iloc[:, 0] <= topo_subcomp)
+prof_regression = dados.loc[indices, dados.columns[0]] # cria uma série com prof menor que topo_subcomp
+DT_regression = dados.loc[indices, dados.columns[1]] # cria uma série com DT menor que topo_subcomp
 
 # Realizar a regressão linear
-x, y_pred, linear_regressor = perform_linear_regression(dados.loc[indices])
+slope, intercept = statistics.linear_regression(prof_regression, DT_regression)
+
+# OLD x, y_pred, linear_regressor = perform_linear_regression(dados.loc[indices])
 
 # Plotar dados e reta de tendência
 # plt.plot(dados.iloc[:, 0], dados.iloc[:, 1], label='Dados originais')
@@ -87,15 +93,13 @@ x, y_pred, linear_regressor = perform_linear_regression(dados.loc[indices])
 # plt.show()
 
 # Imprimir na tela a equação da reta 
-print("A equação da linha de tendência é: y = {:.2f}x + {:.2f}".format(linear_regressor.coef_[0][0], linear_regressor.intercept_[0]))
+print("A equação da linha de tendência é: y = ", slope, " * prof ", " + ", intercept)
 
 # Reshape your data
 deltaT_medido = dados[1]
 
 # Use the DataFrame for prediction
-# Get the first coefficient
-coef = linear_regressor.coef_[0][0]
-deltaT_esperado = (coef * profundidade) + linear_regressor.intercept_
+deltaT_esperado = (slope * profundidade) + intercept
 
 
 ###################
@@ -156,8 +160,77 @@ ax.set_ylabel('Profundidade (m)')
 ###################
 # Plotagem de Círculo de Mohr
 
-# Extração de dados
-prof_interesse = float(input("Qual é a profundidade de interesse para geração do círculo de Mohr? "))
+
+
+# Definindo a prof de interesse para o círculo de mohr
+prof_interesse = 4000 #float(input("Qual é a profundidade de interesse para geração do círculo de Mohr? "))
 print("A profundidade de interesse para geração do círculo de Mohr é:", prof_interesse, ' m')
 
-pressao_poros_interesse = pressao_poros_estimada.iloc[prof_interesse]
+# cálculo da profundidade da base das camadas
+prof_mohr = pd.DataFrame(profundidade)
+
+# Cria uma série deslocada para comparar com a série original
+prof_mohr_deslocada = prof_mohr.shift(1)
+
+# Cria a variável 'indices_mohr' que é True onde 'prof_interesse' é maior que a profundidade anterior e menor ou igual à profundidade atual
+indices_mohr = (prof_interesse > prof_mohr_deslocada.iloc[:, 0]) & (prof_interesse <= prof_mohr.iloc[:, 0])
+
+# Cria a variável 'indices_mohr' que é True onde 'prof_interesse' é maior que a profundidade anterior e menor ou igual à profundidade atual
+indices_mohr = (prof_interesse > prof_mohr_deslocada.iloc[:, 0]) & (prof_interesse <= prof_mohr.iloc[:, 0])
+
+# Extraindo os valores para plotagem do círculo de Mohr
+tensao_hor_max_interesse = float(tensao_hor_max[indices_mohr])
+tensao_hor_min_interesse = float(tensao_hor_min[indices_mohr])
+pressao_poros_interesse = float(pressao_poros_estimada[indices_mohr])
+tensao_sobrecarga_interesse = float(tensao_sobrecarga[indices_mohr])
+
+# Cálculo da pressão do fluido de perfuração na profundidade de interesse
+gradiente_fluido = 11.9 #float(input("Qual é o gradiente de pressão do fluido de perfuração? "))
+print("O gradiente do fluido de perfuração é :", gradiente_fluido, ' lbf/gal')
+pressao_fluido_prof_interesse = gradiente_fluido * 0.1704 * prof_interesse
+print("A pressão exercida pelo fluido de perfuração na profundidade de:   ", prof_interesse, " m é :", pressao_fluido_prof_interesse, ' psi')
+
+# Cálculo das pressões tangenciais máxima e mínima e da pressão radial
+
+tensao_radial = pressao_fluido_prof_interesse - pressao_poros_interesse
+tensao_tang_maxima = (3 * tensao_hor_max_interesse) - tensao_hor_min_interesse - pressao_fluido_prof_interesse - pressao_poros_interesse
+tensao_tang_minima = (3 * tensao_hor_min_interesse) - tensao_hor_max_interesse - pressao_fluido_prof_interesse - pressao_poros_interesse
+
+# Identificando quais tensões são a mínima e a máxima
+tensao_max_circulo = max(tensao_radial, tensao_tang_maxima, tensao_tang_minima)
+tensao_min_circulo = min(tensao_radial, tensao_tang_maxima, tensao_tang_minima)
+centro_circulo = (tensao_max_circulo + tensao_min_circulo) / 2
+raio_circulo = (tensao_max_circulo - tensao_min_circulo) / 2
+
+# Plotando o diagrama de Mohr
+# Crie um array de ângulos de 0 a 2pi
+angulos = np.linspace(0, 2*np.pi, 100)
+
+# Calcule as coordenadas x e y do círculo
+x = centro_circulo + raio_circulo * np.cos(angulos)
+y = raio_circulo * np.sin(angulos)  # a coordenada y do centro é 0
+
+coesao = 4500 # psi
+atrito_interno = np.deg2rad(34) # graus
+
+# Crie a plotagem
+plt.figure(figsize=(6,6))
+plt.plot(x, y)
+
+# Adicione a linha com coeficiente angular = coesao e inclinação = atrito interno
+x_linha = np.linspace(-3, 3, 100)
+y_linha = coesao + np.tan(atrito_interno) * x_linha
+plt.plot(x_linha, y_linha, label='Linha de coesão e atrito interno')
+
+# Adicione os eixos x e y
+plt.axhline(0, color='black',linewidth=0.5)
+plt.axvline(0, color='black',linewidth=0.5)
+plt.grid(color = 'gray', linestyle = '--', linewidth = 0.5)
+
+# Adicione a linha com coeficiente linear = coesao e inclinação = atrito interno
+x_linha = np.linspace(-3, 3, 100)
+y_linha = coesao + np.tan(atrito_interno) * x_linha
+plt.plot(x_linha, y_linha, label='Linha de coesão e atrito interno')
+
+plt.gca().set_aspect('equal', adjustable='box')
+plt.show()
