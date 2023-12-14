@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import statistics
-#from regressao import perform_linear_regression
 from gardner_correl import perform_gardner_correl
 
 
