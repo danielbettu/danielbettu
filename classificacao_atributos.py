@@ -42,12 +42,12 @@ def categorizar(df):
 df_categorizado = categorizar(df)
 
 # função para categorizar os atributos no arquivo de treinamento
-def categorizar(df_treino, df_quantil):
+def categorizar(df_treino, df):
     df_treino_categorizado = pd.DataFrame()
     for col in df_treino.columns:
         if col != df_treino.columns[-1]: # desconsiderando a última coluna do dataframe df_treino
-            quantil_33 = df_quantil.loc[df_quantil['Coluna'] == col, 'Quantil_33'].values[0]
-            quantil_66 = df_quantil.loc[df_quantil['Coluna'] == col, 'Quantil_66'].values[0]
+            quantil_33 = df[col].quantile(0.33)
+            quantil_66 = df[col].quantile(0.66)
             df_treino_categorizado[col + '_baixo'] = np.where(df_treino[col] < quantil_33, 1, 0)
             df_treino_categorizado[col + '_moderado'] = np.where((df_treino[col] >= quantil_33) & (df_treino[col] <= quantil_66), 1, 0)
             df_treino_categorizado[col + '_alto'] = np.where(df_treino[col] > quantil_66, 1, 0)
@@ -55,5 +55,5 @@ def categorizar(df_treino, df_quantil):
             df_treino_categorizado[col] = df_treino[col]
     return df_treino_categorizado
 
-df_treino_categorizado = categorizar(df_treino, df_quantil)
+df_treino_categorizado = categorizar(df_treino, df)
 
