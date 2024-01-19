@@ -10,13 +10,13 @@ import pandas as pd
 import numpy as np
 
 # Carregar dados do arquivo de atributos para análise de favorabilidade
-df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/atributos_entrada.csv', sep= ",", header=0)
-#df = pd.read_csv('/home/bettu/Documents/Python/favorabilidade/dados_validacao.csv', header=0)
+#df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/atributos_entrada.csv', sep= ",", header=0)
+df = pd.read_csv('/home/bettu/Documents/Python/favorabilidade/dados_validacao8.csv', header=0)
 sumario_df = df.describe().transpose() #quickly view summary statistcs for each column of data
 
 # Carregar dados do arquivo de treinamento - ocorrência dos eventos
-df_treino = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/treinamento_eventos.csv', sep= ",", header=0)
-#df_treino = pd.read_csv('/home/bettu/Documents/Python/favorabilidade/dados_validacao_treino.csv', header=0)
+#df_treino = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/treinamento_eventos.csv', sep= ",", header=0)
+df_treino = pd.read_csv('/home/bettu/Documents/Python/favorabilidade/dados_validacao_treino8.csv', header=0)
 
 # criar dataframe com os valores dos quantis 0.33 e 0.66
 def criar_df_quantil(df):
@@ -114,31 +114,33 @@ for col in results_df.columns:
 # Fim do cálculo das probabilidades condicionais e fatores modificadores
 # Início da análise de favorabilidade    
 # a partir do dataframe df, é criado novo dataframe para predição
-df_predicao = df_categorizado.copy()
+resultados_favorabilidade = df_categorizado.copy()
 
 # Cópia do dataframe
-df_predicao = df_categorizado.copy()
+resultados_favorabilidade = df_categorizado.copy()
 
 # Adiciona uma nova coluna ao dataframe
-df_predicao['chance_posteriori'] = 1
+resultados_favorabilidade['chance_posteriori'] = 1
 
 # Itera sobre cada linha do dataframe
-for index, row in df_predicao.iterrows():
-    # Define a chance prévia
+for index, row in resultados_favorabilidade.iterrows():
+    # Define a chance prévia como 1. Esta é a probabilidade inicial antes de considerar os dados.
     chance_previa = 1
 
     # Itera sobre cada coluna do dataframe
-    for col in df_predicao.columns:
-        # Exclui a nova coluna criada
+    for col in resultados_favorabilidade.columns:
+        # Exclui a nova coluna criada 'chance_posteriori' da iteração, pois ela não deve ser usada no cálculo da chance prévia.
         if col == 'chance_posteriori':
             continue
 
-        # Calcula a chance prévia com base no valor em df_categorizado
+        # Calcula a chance prévia com base no valor em df_categorizado.
+        # Se o valor na coluna correspondente de df_categorizado for 0, multiplica a chance prévia pela probabilidade condicional correspondente ao 'fator_necessidade'.
+        # Se o valor na coluna correspondente de df_categorizado for 1, multiplica a chance prévia pela probabilidade condicional correspondente ao 'fator_suficiencia'.
         if df_categorizado.loc[index, col] == 0:
             chance_previa *= probabilidades_condicionais.loc['fator_necessidade', col]
         elif df_categorizado.loc[index, col] == 1:
             chance_previa *= probabilidades_condicionais.loc['fator_suficiencia', col]
 
-    # Registra o valor da chance modificada na coluna chance_posteriori
-    df_predicao.loc[index, 'chance_posteriori'] = chance_previa
-
+    # Registra o valor da chance modificada na coluna 'chance_posteriori' do dataframe 'resultados_favorabilidade'.
+    # Isso atualiza a chance prévia com as informações dos dados e armazena o resultado para referência futura.
+    resultados_favorabilidade.loc[index, 'chance_posteriori'] = chance_previa
