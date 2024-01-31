@@ -10,39 +10,50 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import statistics
-from gardner_correl import perform_gardner_correl
+
 
 
 # Carregar dados do arquivo de entrada em txt
-df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
-
+# df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
+df = pd.read_csv('C:/Python/eaton_Gov_Gp_Gc_Gf.csv', sep= ";", header= 0)
 
 # Criando o dataframe 'dados' com os dados numéricos
 dados = df.iloc[1:].apply(pd.to_numeric, errors='coerce')
 
-# Criando o dataframe 'titulos' com os títulos das colunas
-cabecalho = pd.DataFrame(df.iloc[0]).transpose().astype(str)
-
-
 #####################################
+
 # Cálculo da correlação de Gardner - estimativa da densidade da Fm
+def perform_gardner_correl(dados, coef_a, coef_b):
+    # Realizar a regressão linear
+   # x = dados  # valores converte em numpy array, -1 significa que calcula a dimensão de linhas, mas tem uma coluna
+
+    dens_formacao = coef_a * (1000000/dados) ** coef_b
+  
+    return dens_formacao
 
 # Definição das variáveis
 coef_a = 0.23 # coef de Gardner
 coef_b = 0.25 # coef de Gardner
 
 # Realizar a correlação de Gardner
+
 dens_formacao = perform_gardner_correl(dados.iloc[:,1], coef_a, coef_b)
 
 # Plotar resultado da densidade da fm
-profundidade = dados.loc[:, 0]
-
-# plt.plot(profundidade, dens_formacao)
-# plt.show()
+profundidade = dados.loc[:, "Prof"]
+plt.figure(figsize=(12,12))
+plt.plot(profundidade, dens_formacao)
+plt.xlabel('Profundidade (m)')
+plt.ylabel('Densidade da Formação (g/cm$^{3}$)')
+plt.show()
 
 # Perguntar a profundidade de início da subcompactação
-topo_subcomp = 3200#float(input("Qual é a profundidade de início da subcompactação? "))
+topo_subcomp = float(input("Qual é a profundidade de início da subcompactação? "))
+# topo_subcomp = 3000
 print("A profundidade de início da subcompactação é:", topo_subcomp, ' m')
+
+# Limpar a tela de plotagem
+plt.clf()
 
 ###################
 # Gradiente de sobrecarga
@@ -68,9 +79,16 @@ tensao_sobrecarga = tensao_lamina_agua + tensao_camada.cumsum()
 gradiente_sobrecarga = tensao_sobrecarga / (0.1704 * profundidade)
 
 # Plotar 
-#plt.plot(profundidade, gradiente_sobrecarga)  
-#plt.xlabel('Profundidade (m)')
-#plt.ylabel('Gradiente sobrecarga (lbf/gal)')
+plt.figure(figsize=(12,12))
+plt.plot(profundidade, gradiente_sobrecarga)  
+plt.xlabel('Profundidade (m)')
+plt.ylabel('Gradiente sobrecarga (lbf/gal)')
+
+# Limpar a tela de plotagem
+input("Pressione Enter para continuar...")
+plt.clf()
+
+
 
 #################### Cálculo da tendência linear de compactação
 # Encontrar o índice da menor profundidade até 'topo_subcomp'
@@ -81,24 +99,34 @@ DT_regression = dados.loc[indices, dados.columns[1]] # cria uma série com DT me
 # Realizar a regressão linear
 slope, intercept = statistics.linear_regression(prof_regression, DT_regression)
 
+# plt.plot(profundidade, dens_formacao)
+# plt.show()
+
 # OLD x, y_pred, linear_regressor = perform_linear_regression(dados.loc[indices])
 
+# Reshape your data
+deltaT_medido = dados["DT"]
+
+# Use the DataFrame for prediction
+deltaT_esperado = (slope * profundidade) + intercept
+
 # Plotar dados e reta de tendência
-# plt.plot(dados.iloc[:, 0], dados.iloc[:, 1], label='Dados originais')
-# plt.plot(x, y_pred, color='red', label='Linha de tendência')  # Adicionar a linha de tendência ao gráfico
-# plt.xlabel('Profundidade (m)')
-# plt.ylabel('Vagarosidade (uS/ft)')
-# plt.legend()  # Adicionar legenda ao gráfico
-# plt.show()
+plt.figure(figsize=(12,12))
+plt.plot(dados.iloc[:, 0], dados.iloc[:, 1], label='Dados originais')
+plt.plot(profundidade , deltaT_esperado, color='red', label='Linha de tendência')  # Adicionar a linha de tendência ao gráfico
+plt.xlabel('Profundidade (m)')
+plt.ylabel('Vagarosidade estimada ($\\mu$S/ft)')
+plt.legend()  # Adicionar legenda ao gráfico
+plt.show()
 
 # Imprimir na tela a equação da reta 
 print("A equação da linha de tendência é: y = ", slope, " * prof ", " + ", intercept)
 
-# Reshape your data
-deltaT_medido = dados[1]
+# Limpar a tela de plotagem
+input("Pressione Enter para continuar...")
+plt.clf()
 
-# Use the DataFrame for prediction
-deltaT_esperado = (slope * profundidade) + intercept
+
 
 
 ###################
@@ -113,8 +141,8 @@ gradiente_poros = gradiente_sobrecarga - ((gradiente_sobrecarga - gradiente_agua
 
 C0 = 5000
 phi = 55 #graus
-tensao_hor_max = dados[2]
-tensao_hor_min = dados[3]
+tensao_hor_max = dados['TH']
+tensao_hor_min = dados['Th']
 pressao_poros_estimada = gradiente_poros * 0.1704 * profundidade
 tan2phi = (math.tan((math.pi / 4) + (phi * (math.pi / 180))))**2
 pressao_colapso_min = ((3 * tensao_hor_max) - tensao_hor_min - C0 + (pressao_poros_estimada * ( tan2phi - 1))) / tan2phi + 1
@@ -122,8 +150,8 @@ gradiente_colapso = pressao_colapso_min / (0.1704 * profundidade)
 
 ###################
 # Estimativa de gradiente de fratura
-#Gf = K (Gov – Gpp) + Gpp
-coef_poisson = dados[4]
+# Gf = K (Gov – Gpp) + Gpp
+coef_poisson = dados['Poisson']
 coef_K = coef_poisson / 1 - coef_poisson
 gradiente_fratura = (coef_poisson * (gradiente_sobrecarga - gradiente_poros)) + gradiente_poros
 
@@ -137,6 +165,7 @@ gradiente_fratura = (coef_poisson * (gradiente_sobrecarga - gradiente_poros)) + 
 # Criação da figura e do eixo
 fig, ax = plt.subplots()
 
+plt.figure(figsize=(12,12))
 # Plotagem das curvas
 ax.plot(gradiente_colapso, profundidade, label='Gradiente de Colapso')
 ax.plot(gradiente_poros, profundidade, label='Gradiente de Poros')
@@ -153,8 +182,12 @@ ax.invert_yaxis()
 ax.set_xlabel('Gradientes (lbf/gal)')
 ax.set_ylabel('Profundidade (m)')
 
-# # Exibição da plotagem
-# plt.show()
+# Exibição da plotagem
+plt.show()
+
+# Limpar a tela de plotagem
+input("Pressione Enter para continuar...")
+plt.clf()
 
 ###################
 # Plotagem de Círculo de Mohr
@@ -162,7 +195,8 @@ ax.set_ylabel('Profundidade (m)')
 
 
 # Definindo a prof de interesse para o círculo de mohr
-prof_interesse = 4000 #float(input("Qual é a profundidade de interesse para geração do círculo de Mohr? "))
+# prof_interesse = 4000 
+prof_interesse = float(input("Qual é a profundidade de interesse para geração do círculo de Mohr? "))
 print("A profundidade de interesse para geração do círculo de Mohr é:", prof_interesse, ' m')
 
 # cálculo da profundidade da base das camadas
@@ -184,7 +218,7 @@ pressao_poros_interesse = float(pressao_poros_estimada[indices_mohr])
 tensao_sobrecarga_interesse = float(tensao_sobrecarga[indices_mohr])
 
 # Cálculo da pressão do fluido de perfuração na profundidade de interesse
-gradiente_fluido = 11.9 #float(input("Qual é o gradiente de pressão do fluido de perfuração? "))
+gradiente_fluido = float(input("Qual é o gradiente de pressão do fluido de perfuração? "))
 print("O gradiente do fluido de perfuração é :", gradiente_fluido, ' lbf/gal')
 pressao_fluido_prof_interesse = gradiente_fluido * 0.1704 * prof_interesse
 print("A pressão exercida pelo fluido de perfuração na profundidade de:   ", prof_interesse, " m é :", pressao_fluido_prof_interesse, ' psi')
@@ -209,27 +243,29 @@ angulos = np.linspace(0, 2*np.pi, 100)
 x = centro_circulo + raio_circulo * np.cos(angulos)
 y = raio_circulo * np.sin(angulos)  # a coordenada y do centro é 0
 
-coesao = 4500 # psi
+# Definição das propriedades da rocha
+coesao = 5000 # psi
 atrito_interno = np.deg2rad(34) # graus
+limite_tracao_mohr = -1200 # psi
 
 # Crie a plotagem
-plt.figure(figsize=(6,6))
+plt.figure(figsize=(12,12))
 plt.plot(x, y)
 
-# Adicione a linha com coeficiente angular = coesao e inclinação = atrito interno
-x_linha = np.linspace(-3, 3, 100)
-y_linha = coesao + np.tan(atrito_interno) * x_linha
-plt.plot(x_linha, y_linha, label='Linha de coesão e atrito interno')
 
 # Adicione os eixos x e y
 plt.axhline(0, color='black',linewidth=0.5)
 plt.axvline(0, color='black',linewidth=0.5)
 plt.grid(color = 'gray', linestyle = '--', linewidth = 0.5)
 
-# Adicione a linha com coeficiente linear = coesao e inclinação = atrito interno
-x_linha = np.linspace(-3, 3, 100)
-y_linha = coesao + np.tan(atrito_interno) * x_linha
-plt.plot(x_linha, y_linha, label='Linha de coesão e atrito interno')
+# Adicione a linha vertical a partir da variável 'limite_tracao_mohr'
+plt.vlines(x=limite_tracao_mohr, ymin=0, ymax=raio_circulo, colors='r', linestyles='dashed', label='Limite de tração')
+
+# Adicione a reta usando a equação y = x_atrito*atrito_interno + coesao
+x_linha2 = np.linspace(0, tensao_max_circulo, 2)
+y_linha2 = (x_linha2 * atrito_interno) + coesao
+plt.plot(x_linha2, y_linha2, label='Limite para cisalhamento')
 
 plt.gca().set_aspect('equal', adjustable='box')
+plt.legend()
 plt.show()
