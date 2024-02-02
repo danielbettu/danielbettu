@@ -185,7 +185,7 @@ t_test_results = {'coluna': [], 'valor_t': [], 'valor_p': []}
 
 # Loop através de cada coluna em cols
 for col in cols:
-    # Realiza o teste t para a coluna atual e a coluna 'well_bat' em comp_mean
+    # Realiza o teste t para a coluna atual e a coluna 'well_bat' em df_bath_mean
     # Retorna o valor t (t_stat) e o valor p (p_val)
     # stats.ttest_ind realiza o teste independente de 2 amostras que assume variações populacionais iguais
     t_stat, p_val = stats.ttest_ind(df_bath_mean['well_bat'], df_bath_mean[col])
@@ -227,3 +227,8 @@ for col in cols:
 
 # Converte o dicionário f_test_results em um DataFrame e o armazena em litho_mean_f_test
 TF_bat_mean_f_test = pd.DataFrame(f_test_results)
+
+########################################################################
+########################################################################
+########################################################################
+## 
