@@ -7,7 +7,7 @@ Created on Thu Feb  1 17:04:58 2024
 import pandas as pd
 from scipy import stats
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 # Carregar dados do arquivo de entrada em txt
 # df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
@@ -469,38 +469,43 @@ for var_name in var_list:
 # Concatena todos os dataframes na lista
 result_F_test_group = pd.concat(dfs)
 
+########################################################################
+########################################################################
+########################################################################
+## plotagem dos perfis
 
-# # Agrupamento dos resultados do teste t
-# # Inicializa um DataFrame vazio
-# t_test_result_group = pd.DataFrame()
+# Carregar dados do arquivo de entrada em txt
+# df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
+df = pd.read_csv('C:/Python/PROOF_pocos_validacao.csv', sep= ";", header= 0)
 
-# # Cria uma cópia do dicionário de variáveis globais
-# globals_copy = globals().copy()
+cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
 
-# # Percorre todas as variáveis globais
-# for var_name, var_value in globals_copy.items():
-#     # Verifica se a variável é um dataframe e começa com "TT_"
-#     if isinstance(var_value, pd.DataFrame) and var_name.startswith("TT_"):
-#         for col in cols:
-#             # Adiciona a coluna 'valor_p' ao dataframe
-#             t_test_result_group[col] = var_value['valor_p']
-            
-# # Agrupamento dos resultados do teste F
-# # Inicializa um dicionário para armazenar os dados
-# data = {}
+# Mapeamento de cores
+cores = {1: 'green', 2: 'lightblue', 3: 'yellow', 4: 'blue', 5: 'orange', 6: 'darkblue'}
 
-# # Cria uma cópia do dicionário de variáveis globais
-# globals_copy = globals().copy()
+# Criação da figura e dos eixos
+fig, axs = plt.subplots(1, len(cols), figsize=(len(cols)*3, 20))
 
-# # Percorre todas as variáveis globais
-# for var_name, var_value in globals_copy.items():
-#     # Verifica se a variável é um dataframe e começa com "TF_"
-#     if isinstance(var_value, pd.DataFrame) and var_name.startswith("TF_"):
-#         for col in cols:
-#             # Adiciona a coluna 'valor_p' ao dicionário
-#             data[col] = var_value['valor_p']
+# Loop sobre cada coluna
+for i, col in enumerate(cols):
+    # Seleciona os dados
+    x = df[col]
+    y = df['profundidade']
+    
+    # Cria o gráfico de barras com as cores correspondentes
+    axs[i].barh(y, x, color=[cores[val] for val in x])
+    
+    # Inverte o eixo y para que a profundidade aumente para baixo
+    axs[i].invert_yaxis()
+    
+    # Define o título do subplot
+    axs[i].set_title(col)
+    
+    # Define o intervalo do eixos
+    axs[i].set_yticks(np.arange(0, max(y)+1, 1))  # Intervalo de 1 uni
+    axs[i].set_xticks(np.arange(0, max(x)+1, 1))  # Intervalo de 1 uni
 
-# # Converte o dicionário em um DataFrame
-# f_result_group = pd.DataFrame(data)
+# Mostra a figura
+plt.tight_layout()
+plt.show()
 
-print(   'FIM!')
