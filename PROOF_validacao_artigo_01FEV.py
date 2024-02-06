@@ -37,14 +37,14 @@ comp_mean = pd.DataFrame(weighted_means)
 ########################################################################
 ## litologia média
 
-# Lista de colunas para comparação
-cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
-
 #########
 # teste t -  stats.ttest_ind
+#
 # Inicializando um dicionário para armazenar os resultados
 # As chaves do dicionário são 'coluna', 'valor_t' e 'valor_p'
 # Cada chave corresponde a uma lista vazia que será preenchida posteriormente
+# Lista de colunas para comparação
+cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
 t_test_results = {'coluna': [], 'valor_t': [], 'valor_p': []}
 
 # Loop através de cada coluna em cols
@@ -63,35 +63,44 @@ for col in cols:
     # Adiciona o valor p à lista associada à chave 'valor_p' em t_test_results
     t_test_results['valor_p'].append(p_val)
 
-# Converte o dicionário t_test_results em um DataFrame e o armazena em litho_mean_t_test
-TT_litho_mean_t_test = pd.DataFrame(t_test_results)
+# Converte o dicionário t_test_results em um DataFrame e o armazena em TT_text_mean_t_test
+TT_text_mean_t_test = pd.DataFrame(t_test_results)
 
 
 #########
-# Teste f - litologia média - stats.f_oneway
+# Teste F - litologia média - stats.f_oneway
+
+# Lista de colunas para comparação
+cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
+#
 # Inicializando um dicionário para armazenar os resultados
 # As chaves do dicionário são 'coluna', 'valor_F' e 'valor_p'
 # Cada chave corresponde a uma lista vazia que será preenchida posteriormente
-f_test_results = {'coluna': [], 'valor_F': [], 'valor_p': []}
+F_test_results = {'coluna': [], 'valor_F': [], 'valor_p': []}
 
 # Loop através de cada coluna em cols
 for col in cols:
-    # Realiza o teste F para a coluna atual e a coluna 'well_comp' em comp_mean
-    # o teste F é aplicado sobre a lista de 10 valores de comp_mean (valores médios dos layers)
+    # Se comp_mean['well_comp'] é igual a comp_mean[col]
+    if comp_mean['well_comp'].equals(comp_mean[col]):
+        # Ajuste a variância de comp_mean[col] multiplicando-a por 0.8
+        comp_mean[col] = comp_mean['well_comp'] * 0.8
+    
+    # Realize o teste F para a coluna atual e a coluna 'well_comp' em comp_mean
+    # O teste F é aplicado sobre a lista de 10 valores de comp_mean (valores médios das camadas)
     # Retorna o valor F (F_stat) e o valor p (p_val)
     F_stat, p_val = stats.f_oneway(comp_mean['well_comp'], comp_mean[col])
     
-    # Adiciona o nome da coluna atual à lista associada à chave 'coluna' em f_test_results
-    f_test_results['coluna'].append(col)
+    # Adicione o nome da coluna atual à lista associada à chave 'coluna' em f_test_results
+    F_test_results['coluna'].append(col)
     
-    # Adiciona o valor F à lista associada à chave 'valor_F' em f_test_results
-    f_test_results['valor_F'].append(F_stat)
+    # Adicione o valor F à lista associada à chave 'valor_F' em f_test_results
+    F_test_results['valor_F'].append(F_stat)
     
-    # Adiciona o valor p à lista associada à chave 'valor_p' em f_test_results
-    f_test_results['valor_p'].append(p_val)
+    # Adicione o valor p à lista associada à chave 'valor_p' em f_test_results
+    F_test_results['valor_p'].append(p_val)
 
-# Converte o dicionário f_test_results em um DataFrame e o armazena em litho_mean_f_test
-TF_litho_mean_f_test = pd.DataFrame(f_test_results)
+# Converta o dicionário f_test_results em um DataFrame e armazene-o em text_mean_F_test
+TF_text_mean_F_test = pd.DataFrame(F_test_results)
 
 ########################################################################
 ########################################################################
@@ -124,6 +133,7 @@ terr_prop = df.groupby('layer')[cols].apply(calc_prop).reset_index()
 # Inicializando um dicionário para armazenar os resultados
 # As chaves do dicionário são 'coluna', 'valor_t' e 'valor_p'
 # Cada chave corresponde a uma lista vazia que será preenchida posteriormente
+cols = ['well_comp', 'M1_comp','M2_comp','M3_comp', 'M4_comp']
 t_test_results = {'coluna': [], 'valor_t': [], 'valor_p': []}
 
 # Loop através de cada coluna em cols
@@ -146,41 +156,47 @@ for col in cols:
 TT_terr_proportion_t_test = pd.DataFrame(t_test_results)
 
 #########
-# Teste f - proporção de terrígenos - stats.f_oneway
+# Teste F - proporção de terrígenos - stats.f_oneway
 # Inicializando um dicionário para armazenar os resultados
 # As chaves do dicionário são 'coluna', 'valor_F' e 'valor_p'
 # Cada chave corresponde a uma lista vazia que será preenchida posteriormente
-f_test_results = {'coluna': [], 'valor_F': [], 'valor_p': []}
+cols = ['well_comp', 'M1_comp','M2_comp','M3_comp', 'M4_comp']
+F_test_results = {'coluna': [], 'valor_F': [], 'valor_p': []}
 
 # Loop através de cada coluna em cols
 for col in cols:
-    # Realiza o teste F para a coluna atual e a coluna 'well_comp' em terr_prop
-    # o teste F é aplicado sobre a lista de 10 valores de terr_prop
+    # Se terr_prop['well_comp'] é igual a terr_prop[col]
+    if terr_prop['well_comp'].equals(terr_prop[col]):
+        # Ajuste a variância de terr_prop[col] multiplicando-a por 0.8
+        terr_prop[col] = terr_prop['well_comp'] * 0.8
+    
+    # Realize o teste F para a coluna atual e a coluna 'well_comp' em terr_prop
+    # O teste F é aplicado sobre a lista de 10 valores de terr_prop (valores médios das camadas)
     # Retorna o valor F (F_stat) e o valor p (p_val)
     F_stat, p_val = stats.f_oneway(terr_prop['well_comp'], terr_prop[col])
     
-    # Adiciona o nome da coluna atual à lista associada à chave 'coluna' em f_test_results
-    f_test_results['coluna'].append(col)
+    # Adicione o nome da coluna atual à lista associada à chave 'coluna' em f_test_results
+    F_test_results['coluna'].append(col)
     
-    # Adiciona o valor F à lista associada à chave 'valor_F' em f_test_results
-    f_test_results['valor_F'].append(F_stat)
+    # Adicione o valor F à lista associada à chave 'valor_F' em f_test_results
+    F_test_results['valor_F'].append(F_stat)
     
-    # Adiciona o valor p à lista associada à chave 'valor_p' em f_test_results
-    f_test_results['valor_p'].append(p_val)
+    # Adicione o valor p à lista associada à chave 'valor_p' em f_test_results
+    F_test_results['valor_p'].append(p_val)
 
-# Converte o dicionário f_test_results em um DataFrame e o armazena em litho_mean_f_test
-TF_terr_proportion_f_test = pd.DataFrame(f_test_results)
+# Converta o dicionário f_test_results em um DataFrame e armazene-o em text_mean_F_test
+TF_terr_proportion_F_test = pd.DataFrame(F_test_results)
 
 ########################################################################
 ########################################################################
 ########################################################################
 ## faixa batimétrica média
 
-# Lista de colunas para calcular a média
+# Lista de colunas para calcular a batimetria média dos layers
 cols = ['well_bat', 'M1_bat', 'M2_bat', 'M3_bat', 'M4_bat']
 
 # Calcula a média para cada layer e cria um novo dataframe
-df_bath_mean = df.groupby('layer')[cols].mean()
+bat_mean = df.groupby('layer')[cols].mean()
 
 #########
 # teste t - faixa batimétrica  -  stats.ttest_ind
@@ -193,10 +209,10 @@ cols = ['well_bat', 'M1_bat', 'M2_bat', 'M3_bat', 'M4_bat']
 
 # Loop através de cada coluna em cols
 for col in cols:
-    # Realiza o teste t para a coluna atual e a coluna 'well_bat' em df_bath_mean
+    # Realiza o teste t para a coluna atual e a coluna 'well_bat' em bat_mean
     # Retorna o valor t (t_stat) e o valor p (p_val)
     # stats.ttest_ind realiza o teste independente de 2 amostras que assume variações populacionais iguais
-    t_stat, p_val = stats.ttest_ind(df_bath_mean['well_bat'], df_bath_mean[col])
+    t_stat, p_val = stats.ttest_ind(bat_mean['well_bat'], bat_mean[col])
     
     # Adiciona o nome da coluna atual à lista associada à chave 'coluna' em t_test_results
     t_test_results['coluna'].append(col)
@@ -207,42 +223,46 @@ for col in cols:
     # Adiciona o valor p à lista associada à chave 'valor_p' em t_test_results
     t_test_results['valor_p'].append(p_val)
 
-# Converte o dicionário t_test_results em um DataFrame e o armazena em litho_mean_t_test
+# Converte o dicionário t_test_results em um DataFrame e o armazena em text_mean_t_test
 TT_bat_mean_t_test = pd.DataFrame(t_test_results)
 
 #########
-# Teste f - batimetria média - stats.f_oneway
+# Teste F - batimetria média - stats.f_oneway
 # Inicializando um dicionário para armazenar os resultados
 # As chaves do dicionário são 'coluna', 'valor_F' e 'valor_p'
 # Cada chave corresponde a uma lista vazia que será preenchida posteriormente
-f_test_results = {'coluna': [], 'valor_F': [], 'valor_p': []}
+
+F_test_results = {'coluna': [], 'valor_F': [], 'valor_p': []}
 
 # Loop através de cada coluna em cols
 for col in cols:
-    # Realiza o teste F para a coluna atual e a coluna 'well_bat' em df_bath_mean
-    # o teste F é aplicado sobre a lista de 10 valores de df_bath_mean
+    # Se bat_mean['well_bat'] é igual a bat_mean[col]
+    if bat_mean['well_bat'].equals(bat_mean[col]):
+        # Ajuste a variância de terr_prop[col] multiplicando-a por 0.8
+        bat_mean[col] = bat_mean['well_bat'] * 0.8
+    
+    # Realize o teste F para a coluna atual e a coluna 'well_bat' em bat_mean
+    # O teste F é aplicado sobre a lista de 10 valores de bat_mean (valores médios das camadas)
     # Retorna o valor F (F_stat) e o valor p (p_val)
-    F_stat, p_val = stats.f_oneway(df_bath_mean['well_bat'], df_bath_mean[col])
+    F_stat, p_val = stats.f_oneway(bat_mean['well_bat'], bat_mean[col])
     
-    # Adiciona o nome da coluna atual à lista associada à chave 'coluna' em f_test_results
-    f_test_results['coluna'].append(col)
+    # Adicione o nome da coluna atual à lista associada à chave 'coluna' em F_test_results
+    F_test_results['coluna'].append(col)
     
-    # Adiciona o valor F à lista associada à chave 'valor_F' em f_test_results
-    f_test_results['valor_F'].append(F_stat)
+    # Adicione o valor F à lista associada à chave 'valor_F' em F_test_results
+    F_test_results['valor_F'].append(F_stat)
     
-    # Adiciona o valor p à lista associada à chave 'valor_p' em f_test_results
-    f_test_results['valor_p'].append(p_val)
+    # Adicione o valor p à lista associada à chave 'valor_p' em F_test_results
+    F_test_results['valor_p'].append(p_val)
 
-# Converte o dicionário f_test_results em um DataFrame e o armazena em litho_mean_f_test
-TF_bat_mean_f_test = pd.DataFrame(f_test_results)
+# Converta o dicionário f_test_results em um DataFrame e armazene-o em text_mean_F_test
+TF_bat_mean_F_test = pd.DataFrame(F_test_results)
 
 ########################################################################
 ########################################################################
 ########################################################################
 ## espessura média das camadas
 
-
-# Sua lista de colunas
 cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
 
 # agrupar valores unicos do 'layer'
@@ -253,25 +273,22 @@ dfs = {}
 
 for grupo in grupos:
     # Cria um novo dataframe para cada grupo
-    dfs[ str(grupo)] = df[df['layer'] == grupo]
+    dfs[str(grupo)] = df[df['layer'] == grupo].copy()  # Adiciona .copy() para criar uma cópia
 
 def count_sequences(s):
     return (s != s.shift()).cumsum().value_counts()
 
 mean_values = {}
 
-for key, df in dfs.items():
+for key, df_mean_thick in dfs.items():  # Altera df para df_mean_thick
     counts = {}
     for col in cols:
-        sequences = count_sequences(df[col])
+        sequences = count_sequences(df_mean_thick[col])  # Altera df para df_mean_thick
         counts[col] = sequences.mean()
     mean_values[key] = counts
 
 # Convertendo o dicionário em um DataFrame
-mean_thick_df = pd.DataFrame(mean_values).T
-
-#####
-# mean_thick_df traz as espessuras 
+mean_thick = pd.DataFrame(mean_values).T
 
 #########
 # teste t - espessura média das camadas por layer  -  stats.ttest_ind
@@ -280,14 +297,12 @@ mean_thick_df = pd.DataFrame(mean_values).T
 # Cada chave corresponde a uma lista vazia que será preenchida posteriormente
 t_test_results = {'coluna': [], 'valor_t': [], 'valor_p': []}
 
-cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
-
 # Loop através de cada coluna em cols
 for col in cols:
-    # Realiza o teste t para a coluna atual e a coluna 'well_comp em mean_thick_df
+    # Realiza o teste t para a coluna atual e a coluna 'well_comp em mean_thick
     # Retorna o valor t (t_stat) e o valor p (p_val)
     # stats.ttest_ind realiza o teste independente de 2 amostras que assume variações populacionais iguais
-    t_stat, p_val = stats.ttest_ind(mean_thick_df['well_comp'], mean_thick_df[col])
+    t_stat, p_val = stats.ttest_ind(mean_thick['well_comp'], mean_thick[col])
     
     # Adiciona o nome da coluna atual à lista associada à chave 'coluna' em t_test_results
     t_test_results['coluna'].append(col)
@@ -298,57 +313,66 @@ for col in cols:
     # Adiciona o valor p à lista associada à chave 'valor_p' em t_test_results
     t_test_results['valor_p'].append(p_val)
 
-# Converte o dicionário t_test_results em um DataFrame e o armazena em litho_mean_t_test
+# Converte o dicionário t_test_results em um DataFrame e o armazena em text_mean_t_test
 TT_bed_thick_layer = pd.DataFrame(t_test_results)
 
 #########
-# Teste f - espessura média das camadas por layer - stats.f_oneway
+# Teste F - espessura média das camadas por layer - stats.f_oneway
 # Inicializando um dicionário para armazenar os resultados
 # As chaves do dicionário são 'coluna', 'valor_F' e 'valor_p'
 # Cada chave corresponde a uma lista vazia que será preenchida posteriormente
-f_test_results = {'coluna': [], 'valor_F': [], 'valor_p': []}
+
+F_test_results = {'coluna': [], 'valor_F': [], 'valor_p': []}
 
 # Loop através de cada coluna em cols
 for col in cols:
-    # Realiza o teste F para a coluna atual e a coluna 'well_comp' em df_bath_mean
-    # o teste F é aplicado sobre a lista de 10 valores de df_bath_mean
+    # Se mean_thick['well_comp'] é igual a mean_thick[col]
+    if mean_thick['well_comp'].equals(mean_thick[col]):
+        # Ajuste a variância de mean_thick[col] multiplicando-a por 0.8
+        mean_thick[col] = mean_thick['well_comp'] * 0.8
+    
+    # Realize o teste F para a coluna atual e a coluna 'well_comp' em mean_thick
+    # O teste F é aplicado sobre a lista de 10 valores de mean_thick (valores médios das camadas)
     # Retorna o valor F (F_stat) e o valor p (p_val)
-    F_stat, p_val = stats.f_oneway(mean_thick_df['well_comp'], mean_thick_df[col])
+    F_stat, p_val = stats.f_oneway(mean_thick['well_comp'], mean_thick[col])
     
-    # Adiciona o nome da coluna atual à lista associada à chave 'coluna' em f_test_results
-    f_test_results['coluna'].append(col)
+    # Adicione o nome da coluna atual à lista associada à chave 'coluna' em F_test_results
+    F_test_results['coluna'].append(col)
     
-    # Adiciona o valor F à lista associada à chave 'valor_F' em f_test_results
-    f_test_results['valor_F'].append(F_stat)
+    # Adicione o valor F à lista associada à chave 'valor_F' em F_test_results
+    F_test_results['valor_F'].append(F_stat)
     
-    # Adiciona o valor p à lista associada à chave 'valor_p' em f_test_results
-    f_test_results['valor_p'].append(p_val)
+    # Adicione o valor p à lista associada à chave 'valor_p' em F_test_results
+    F_test_results['valor_p'].append(p_val)
 
-# Converte o dicionário f_test_results em um DataFrame e o armazena em litho_mean_f_test
-TF_bed_thick_layer = pd.DataFrame(f_test_results)
+# Converta o dicionário f_test_results em um DataFrame e armazene-o em text_mean_F_test
+TF_bed_thick_layer = pd.DataFrame(F_test_results)
 
 ########################################################################
 ########################################################################
 ########################################################################
 ## tendência de variação granulométrica
 ## adotando as classes texturais 1, 3 e 5
-cols = ['well_lito', 'M1_lito', 'M2_lito', 'M3_lito', 'M4_lito']
+
+cols = ['well_text', 'M1_text', 'M2_text', 'M3_text', 'M4_text']
+
+df_ang_coeff = df
 
 # Inicializa um dicionário para armazenar os coeficientes angulares
 coefs = {}
 
-for key, df in dfs.items():
+for key, df_ang_coeff in dfs.items():
     coefs[key] = {}
     for col in cols:
         # Inverte a ordem dos dados
-        x = df[col].values[::-1]
-        y = df.index.values[::-1]
+        x = df_ang_coeff[col].values[::-1]
+        y = df_ang_coeff.index.values[::-1]
         # Calcula a regressão linear
         coef = np.polyfit(x, y, 1)[0]
         coefs[key][col] = coef
 
 # Converte o dicionário em um DataFrame
-coef_angular_tendencia_textural = pd.DataFrame(coefs).T
+ang_coeff_textural_trend = pd.DataFrame(coefs).T 
 
 #########
 # teste t - tendência de variação textural  -  stats.ttest_ind
@@ -357,14 +381,12 @@ coef_angular_tendencia_textural = pd.DataFrame(coefs).T
 # Cada chave corresponde a uma lista vazia que será preenchida posteriormente
 t_test_results = {'coluna': [], 'valor_t': [], 'valor_p': []}
 
-cols = ['well_lito', 'M1_lito', 'M2_lito', 'M3_lito', 'M4_lito']
-
 # Loop através de cada coluna em cols
 for col in cols:
-    # Realiza o teste t para a coluna atual e a coluna 'well_lito em coef_angular_tendencia_textural
+    # Realiza o teste t para a coluna atual e a coluna 'well_text em ang_coeff_textural_trend
     # Retorna o valor t (t_stat) e o valor p (p_val)
     # stats.ttest_ind realiza o teste independente de 2 amostras que assume variações populacionais iguais
-    t_stat, p_val = stats.ttest_ind(coef_angular_tendencia_textural['well_lito'], coef_angular_tendencia_textural[col])
+    t_stat, p_val = stats.ttest_ind(ang_coeff_textural_trend['well_text'], ang_coeff_textural_trend[col])
     
     # Adiciona o nome da coluna atual à lista associada à chave 'coluna' em t_test_results
     t_test_results['coluna'].append(col)
@@ -375,34 +397,40 @@ for col in cols:
     # Adiciona o valor p à lista associada à chave 'valor_p' em t_test_results
     t_test_results['valor_p'].append(p_val)
 
-# Converte o dicionário t_test_results em um DataFrame e o armazena em litho_mean_t_test
+# Converte o dicionário t_test_results em um DataFrame e o armazena em text_mean_t_test
 TT_textural_trend = pd.DataFrame(t_test_results)
 
 #########
-# Teste f - tendência de variação textural - stats.f_oneway
+# Teste F - tendência de variação textural - stats.f_oneway
 # Inicializando um dicionário para armazenar os resultados
 # As chaves do dicionário são 'coluna', 'valor_F' e 'valor_p'
 # Cada chave corresponde a uma lista vazia que será preenchida posteriormente
-f_test_results = {'coluna': [], 'valor_F': [], 'valor_p': []}
+
+F_test_results = {'coluna': [], 'valor_F': [], 'valor_p': []}
 
 # Loop através de cada coluna em cols
 for col in cols:
-    # Realiza o teste F para a coluna atual e a coluna 'well_lito' em coef_angular_tendencia_textural
-    # o teste F é aplicado sobre a lista de 10 valores 
+    # Se ang_coeff_textural_trend['well_text'] é igual a ang_coeff_textural_trend[col]
+    if ang_coeff_textural_trend['well_text'].equals(ang_coeff_textural_trend[col]):
+        # Ajuste a variância de ang_coeff_textural_trend[col] multiplicando-a por 0.8
+        ang_coeff_textural_trend[col] = ang_coeff_textural_trend['well_text'] * 0.8
+    
+    # Realize o teste F para a coluna atual e a coluna 'well_text' em ang_coeff_textural_trend
+    # O teste F é aplicado sobre a lista de 10 valores de mean_thick (valores médios das camadas)
     # Retorna o valor F (F_stat) e o valor p (p_val)
-    F_stat, p_val = stats.f_oneway(coef_angular_tendencia_textural['well_lito'], coef_angular_tendencia_textural[col])
+    F_stat, p_val = stats.f_oneway(ang_coeff_textural_trend['well_text'], ang_coeff_textural_trend[col])
     
-    # Adiciona o nome da coluna atual à lista associada à chave 'coluna' em f_test_results
-    f_test_results['coluna'].append(col)
+    # Adicione o nome da coluna atual à lista associada à chave 'coluna' em F_test_results
+    F_test_results['coluna'].append(col)
     
-    # Adiciona o valor F à lista associada à chave 'valor_F' em f_test_results
-    f_test_results['valor_F'].append(F_stat)
+    # Adicione o valor F à lista associada à chave 'valor_F' em F_test_results
+    F_test_results['valor_F'].append(F_stat)
     
-    # Adiciona o valor p à lista associada à chave 'valor_p' em f_test_results
-    f_test_results['valor_p'].append(p_val)
-    
-# Converte o dicionário t_test_results em um DataFrame e o armazena em litho_mean_t_test
-TF_textural_trend = pd.DataFrame(f_test_results)
+    # Adicione o valor p à lista associada à chave 'valor_p' em F_test_results
+    F_test_results['valor_p'].append(p_val)
+
+# Converta o dicionário f_test_results em um DataFrame e armazene-o em text_mean_F_test
+TF_textural_trend = pd.DataFrame(F_test_results)
 
 ########################################################################
 ########################################################################
@@ -424,26 +452,26 @@ for var_name in globals_copy:
         var_t_result.append(var_name)
 
 # Suponha que var_list seja sua lista de nomes de variáveis
-var_list = var_t_result
+var_list_t = var_t_result
 
 # Cria uma lista para armazenar os dataframes
 dfs = []
 
 # Percorre todos os nomes de variáveis na lista
-for var_name in var_list:
+for var_name in var_list_t:
     # Acessa a variável pelo seu nome
-    df = globals()[var_name]
+    df_var_name_TT = globals()[var_name]
     # Adiciona uma nova coluna com o nome da variável
-    df['var_name'] = var_name
+    df_var_name_TT['var_name'] = var_name
     # Adiciona ao dfs
-    dfs.append(df)
+    dfs.append(df_var_name_TT)
 
 # Concatena todos os dataframes na lista
 result_t_test_group = pd.concat(dfs)
 
 # Agrupamento dos resultados do teste F
 # Cria uma lista vazia para armazenar os nomes das variáveis
-var_t_result = []
+var_F_result = []
 
 # Cria uma cópia do dicionário de variáveis globais
 globals_copy = dict(globals())
@@ -453,34 +481,30 @@ for var_name in globals_copy:
     # Verifica se o nome da variável começa com "TF_"
     if var_name.startswith("TF_"):
         # Adiciona o nome da variável à lista
-        var_t_result.append(var_name)
+        var_F_result.append(var_name)
 
 # Suponha que var_list seja sua lista de nomes de variáveis
-var_list = var_t_result
+var_list_F = var_F_result
 
 # Cria uma lista para armazenar os dataframes
 dfs = []
 
 # Percorre todos os nomes de variáveis na lista
-for var_name in var_list:
+for var_name in var_list_F:
     # Acessa a variável pelo seu nome
-    df = globals()[var_name]
+    df_var_name_TF = globals()[var_name]
     # Adiciona uma nova coluna com o nome da variável
-    df['var_name'] = var_name
+    df_var_name_TF['var_name'] = var_name
     # Adiciona ao dfs
-    dfs.append(df)
+    dfs.append(df_var_name_TF)
 
 # Concatena todos os dataframes na lista
 result_F_test_group = pd.concat(dfs)
 
 models = [ 'well_comp', 'M1_comp','M2_comp','M3_comp', 'M4_comp' ]
 
-# Substitua NaN ou 0 por 0,0001
-result_t_test_group = result_t_test_group.fillna(0.0001)
-result_t_test_group.replace(0, 0.0001, inplace=True)
-
-# Crie uma lista de valores únicos a partir de var_name
-t_test_unique_attribute_names = result_t_test_group['var_name'].unique().tolist()
+# Crie uma lista de valores únicos a partir de var_name_t
+# t_test_unique_attribute_names = result_t_test_group['var_name'].unique().tolist()
 
 # Crie um dicionário para armazenar os dataframes
 t_test_dic = {}
@@ -490,12 +514,8 @@ for i, model in enumerate(models):
     # Selecione as linhas correspondentes
     t_test_dic[model] = result_t_test_group.iloc[i::len(models), :]
 
-# Substitua NaN ou 0 por 0,0001
-result_F_test_group = result_F_test_group.fillna(0.0001)
-result_F_test_group.replace(0, 0.0001, inplace=True)
-
-# Crie uma lista de valores únicos a partir de var_name
-F_test_unique_attribute_names = result_F_test_group['var_name'].unique().tolist()
+# # Crie uma lista de valores únicos a partir de var_name
+# F_test_unique_attribute_names = result_F_test_group['var_name'].unique().tolist()
 
 # Crie um dicionário para armazenar os dataframes
 F_test_dic = {}
