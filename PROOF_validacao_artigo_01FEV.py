@@ -4,10 +4,14 @@ Created on Thu Feb  1 17:04:58 2024
 
 @author: 02901717926
 """
+import time
 import pandas as pd
 from scipy import stats
 import numpy as np
 import matplotlib.pyplot as plt
+
+# Marca o tempo de início
+inicio = time.time()
 
 # Carregar dados do arquivo de entrada em txt
 # df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
@@ -469,6 +473,79 @@ for var_name in var_list:
 # Concatena todos os dataframes na lista
 result_F_test_group = pd.concat(dfs)
 
+models = [ 'well_comp', 'M1_comp','M2_comp','M3_comp', 'M4_comp' ]
+
+# Substitua NaN ou 0 por 0,0001
+result_t_test_group = result_t_test_group.fillna(0.0001)
+result_t_test_group.replace(0, 0.0001, inplace=True)
+
+# Crie uma lista de valores únicos a partir de var_name
+t_test_unique_attribute_names = result_t_test_group['var_name'].unique().tolist()
+
+# Crie um dicionário para armazenar os dataframes
+t_test_dic = {}
+
+# Para cada valor único em 'models'
+for i, model in enumerate(models):
+    # Selecione as linhas correspondentes
+    t_test_dic[model] = result_t_test_group.iloc[i::len(models), :]
+
+# Substitua NaN ou 0 por 0,0001
+result_F_test_group = result_F_test_group.fillna(0.0001)
+result_F_test_group.replace(0, 0.0001, inplace=True)
+
+# Crie uma lista de valores únicos a partir de var_name
+F_test_unique_attribute_names = result_F_test_group['var_name'].unique().tolist()
+
+# Crie um dicionário para armazenar os dataframes
+F_test_dic = {}
+
+# Para cada valor único em 'models'
+for i, model in enumerate(models):
+    # Selecione as linhas correspondentes
+    F_test_dic[model] = result_F_test_group.iloc[i::len(models), :]
+
+########################################################################
+########################################################################
+########################################################################
+## cálculo da probabilidade com todos os atributos t e F
+
+# criar lista com nome dos modelos sem complementos
+models_names = [value.split('_')[0] for value in models]
+
+# cálculo do produto das probabilidades resultantes dos testes t
+product_t_test = pd.DataFrame(columns=['Modelo', 'Produto'])  # Cria um novo dataframe com as colunas 'Modelo' e 'Produto'
+for key, df_model in t_test_dic.items():
+    # Extrai o prefixo da coluna 'coluna'
+    prefix = df_model['coluna'].str.split('_').str[0].unique()
+    # Calcula o produto de todas as linhas da coluna 'valor_p'
+    product = df_model['valor_p'].product()
+    # Adiciona o produto ao novo dataframe
+    for p in prefix:
+        product_t_test = product_t_test.append({'Modelo': p, 'Produto': product}, ignore_index=True)
+
+# cálculo do produto das probabilidades resultantes dos testes F
+product_F_test = pd.DataFrame(columns=['Modelo', 'Produto'])  # Cria um novo dataframe com as colunas 'Modelo' e 'Produto'
+for key, df_model in F_test_dic.items():
+    # Extrai o prefixo da coluna 'coluna'
+    prefix = df_model['coluna'].str.split('_').str[0].unique()
+    # Calcula o produto de todas as linhas da coluna 'valor_p'
+    product = df_model['valor_p'].product()
+    # Adiciona o produto ao novo dataframe
+    for p in prefix:
+        product_F_test = product_F_test.append({'Modelo': p, 'Produto': product}, ignore_index=True)
+
+
+# Agora, calculamos o produto das colunas 'Produto'
+product_t_test.set_index('Modelo', inplace=True)
+product_F_test.set_index('Modelo', inplace=True)
+
+# Agora, calculamos o produto das colunas 'Produto'
+product_group = (product_t_test['Produto'] * product_F_test['Produto']).reset_index()
+
+PROOF = product_group.copy()  # Cria uma cópia do dataframe product_group
+PROOF['Produto'] = 1 - PROOF['Produto']  # Subtrai cada valor na coluna 'Produto' de 1
+
 ########################################################################
 ########################################################################
 ########################################################################
@@ -508,4 +585,11 @@ for i, col in enumerate(cols):
 # Mostra a figura
 plt.tight_layout()
 plt.show()
+
+# Marca o tempo de término
+fim = time.time()
+# Calcula a diferença
+tempo_decorrido = fim - inicio
+print(f"O tempo decorrido foi de {tempo_decorrido} segundos.")
+
 
