@@ -9,6 +9,7 @@ import pandas as pd
 from scipy import stats
 import numpy as np
 import matplotlib.pyplot as plt
+import copy
 
 # Marca o tempo de início
 inicio = time.time()
@@ -530,6 +531,19 @@ for i, model in enumerate(models):
 ########################################################################
 ## cálculo da probabilidade com todos os atributos t e F
 
+# pré-cálculo do produto das probabilidades
+# para evitar valores tendendo a zero ou infinito, são impostos limites mínimo 0.001 e máximo 0.9 (conforme arquivo PROOF_Workflow_Boing.docx)
+
+# Aplicando os limites em cada DataFrame no dicionário t_test_dic
+for key in t_test_dic.keys():
+    if 'valor_p' in t_test_dic[key].columns:
+        t_test_dic[key]['valor_p'] = t_test_dic[key]['valor_p'].clip(lower=0.001, upper=0.9)
+        
+# Aplicando os limites em cada DataFrame no dicionário F_test_dic
+for key in F_test_dic.keys():
+    if 'valor_p' in F_test_dic[key].columns:
+        F_test_dic[key]['valor_p'] = F_test_dic[key]['valor_p'].clip(lower=0.001, upper=0.9)
+        
 # criar lista com nome dos modelos sem complementos
 models_names = [value.split('_')[0] for value in models]
 
@@ -555,7 +569,6 @@ for key, df_model in F_test_dic.items():
     for p in prefix:
         product_F_test = product_F_test.append({'Modelo': p, 'Produto': product}, ignore_index=True)
 
-
 # Agora, calculamos o produto das colunas 'Produto'
 product_t_test.set_index('Modelo', inplace=True)
 product_F_test.set_index('Modelo', inplace=True)
@@ -564,16 +577,20 @@ product_F_test.set_index('Modelo', inplace=True)
 product_group = (product_t_test['Produto'] * product_F_test['Produto']).reset_index()
 
 PROOF = product_group.copy()  # Cria uma cópia do dataframe product_group
-PROOF['Produto'] = 1 - PROOF['Produto']  # Subtrai cada valor na coluna 'Produto' de 1
+PROOF.rename(columns={'Produto': 'PROOF'}, inplace=True) # Renomeia a coluna 'Produto' para 'PROOF'
+PROOF['PROOF'] = 1 - PROOF['PROOF'] # Atualiza a coluna 'PROOF' para ser 1 - 'PROOF'
+
+# PROOF = PROOF_pre.copy()
+# PROOF = 1 - product_group['Produto']
 
 ########################################################################
 ########################################################################
 ########################################################################
 ## plotagem dos perfis
 
-# Carregar dados do arquivo de entrada em txt
-# df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
-df = pd.read_csv('C:/Python/PROOF_pocos_validacao.csv', sep= ";", header= 0)
+# # Carregar dados do arquivo de entrada em txt
+# # df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
+# df = pd.read_csv('C:/Python/PROOF_pocos_validacao.csv', sep= ";", header= 0)
 
 cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
 
