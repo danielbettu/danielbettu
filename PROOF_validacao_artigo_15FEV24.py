@@ -39,23 +39,23 @@ def most_frequent_and_max(s):
 
 lit_dom = df.groupby('layer')[cols].agg(most_frequent_and_max).reset_index() # litologia dominante em cada layer
 
-dict_mean_lit_dom = {} # Crie um dicionário para armazenar os dataframes
+dict_mean_litho_dom = {} # Crie um dicionário para armazenar os dataframes
 
 for col in cols:
     # Calcule a média ponderada usando os valores em thick_sum_layer como pesos
     weighted_avg = np.average(lit_dom[col], weights=np.sqrt(thick_sum_layer))
        
     # Crie um novo dataframe com a média ponderada
-    dict_mean_lit_dom["mean_lit_dom_" + col] = pd.DataFrame([weighted_avg], columns=[col])
+    dict_mean_litho_dom[col] = pd.DataFrame([weighted_avg], columns=[col])
     
-dict_var_lit_dom = {} # Crie um dicionário para armazenar os dataframes
+dict_var_litho_dom = {} # Crie um dicionário para armazenar os dataframes
 
 for col in cols:
     # Calcule a variância
     variance = np.var(lit_dom[col])
        
     # Crie um novo dataframe com a média ponderada
-    dict_var_lit_dom["var_lit_dom_" + col] = pd.DataFrame([variance], columns=[col])
+    dict_var_litho_dom[col] = pd.DataFrame([variance], columns=[col])
     
 ########################################################################
 ########################################################################
@@ -90,7 +90,7 @@ for col in cols:
     weighted_avg = np.average(terr_prop[col], weights=np.sqrt(thick_sum_layer))
        
     # Crie um novo dataframe com a média ponderada
-    dict_mean_terr_prop["mean_terr_prop_" + col] = pd.DataFrame([weighted_avg], columns=[col])
+    dict_mean_terr_prop[col] = pd.DataFrame([weighted_avg], columns=[col])
 
 dict_var_terr_prop = {} # Crie um dicionário para armazenar os dataframes
 
@@ -99,7 +99,7 @@ for col in cols:
     variance = np.var(terr_prop[col])
        
     # Crie um novo dataframe com a média ponderada
-    dict_var_terr_prop["var_terr_prop_" + col] = pd.DataFrame([variance], columns=[col])
+    dict_var_terr_prop[col] = pd.DataFrame([variance], columns=[col])
     
 ########################################################################
 ########################################################################
@@ -119,7 +119,7 @@ for col in cols:
     average = np.average(bat_mean[col])
        
     # Crie um novo dataframe com a média 
-    dict_mean_bat["mean_bat_" + col] = pd.DataFrame([average], columns=[col])
+    dict_mean_bat[col] = pd.DataFrame([average], columns=[col])
     
 dict_var_bat = {} # Crie um dicionário para armazenar os dataframes
 
@@ -128,7 +128,7 @@ for col in cols:
     variance = np.var(bat_mean[col])
        
     # Crie um novo dataframe com a média ponderada
-    dict_var_bat["var_bat_" + col] = pd.DataFrame([variance], columns=[col])
+    dict_var_bat[col] = pd.DataFrame([variance], columns=[col])
 
 ########################################################################
 ########################################################################
@@ -184,7 +184,7 @@ for col in cols:
     average = np.average(sqrt_mean_thick[col])
        
     # Crie um novo dataframe com a média 
-    dict_mean_sqrt_thick["mean_layer_thick_" + col] = pd.DataFrame([average], columns=[col])
+    dict_mean_sqrt_thick[col] = pd.DataFrame([average], columns=[col])
 
 dict_var_sqrt_thick = {} # Crie um dicionário para armazenar os dataframes
 
@@ -193,7 +193,7 @@ for col in cols:
     variance = np.var(sqrt_mean_thick[col])
        
     # Crie um novo dataframe com a média ponderada
-    dict_var_sqrt_thick["var_sqrt_thick_" + col] = pd.DataFrame([variance], columns=[col])
+    dict_var_sqrt_thick[col] = pd.DataFrame([variance], columns=[col])
 
 #######################################################################
 #######################################################################
@@ -203,159 +203,196 @@ for col in cols:
 # para fins de desenvolvimento e apresentação da PROOF em artigo
 # a tendência de variação textural será calculada para o poço como um todo
 # e não por sequência (isso será feito no artigo)
+
 cols = ['well_text', 'M1_text', 'M2_text', 'M3_text', 'M4_text']
 
-df_ang_coeff = df.copy()
+df_ang_coef = df.copy()
 
-# Primeiro, vamos definir os valores que consideramos 'grossos' e 'finos'
-grossos_vals = [3, 5]
-finos_vals = [1]
+# Inicializa o dicionário final
+ang_coef_dict = {}
 
-# Agora, vamos criar um dicionário para armazenar os resultados temporários
-coarse_prop_dict = {}
-
-# Iteramos sobre cada 'layer' único no DataFrame original
-for layer in df_ang_coeff['layer'].unique():
-    # Criamos um subconjunto do DataFrame original que contém apenas as linhas para o 'layer' atual
-    df_subset = df_ang_coeff[df_ang_coeff['layer'] == layer]
-    
-    # Inicializamos um dicionário para armazenar os resultados para o 'layer' atual
-    coarse_prop_dict[layer] = {}
-    
-    # Iteramos sobre cada coluna especificada em 'cols'
-    for col in cols:
-        # Calculamos a quantidade de 'grossos' e 'finos' para o 'layer' e 'col' atuais
-        grossos = df_subset[col].isin(grossos_vals).sum()
-        finos = df_subset[col].isin(finos_vals).sum()
-        
-        # Calculamos a proporção de 'grossos' para o total de 'grossos' e 'finos'
-        coarse_prop = grossos / (grossos + finos)
-        
-        # Adicionamos o resultado ao nosso dicionário temporário
-        coarse_prop_dict[layer][col] = coarse_prop
-
-# Convertemos o dicionário de resultados em um DataFrame
-df_coarse_prop = pd.DataFrame(coarse_prop_dict).T
-
-# Inicializa um dicionário para armazenar os coeficientes angulares
-coefs = {}
-
-# Itera sobre cada coluna especificada em 'cols'
+# cálculod do coeficiente angular - Loop através de cada coluna/modelo
 for col in cols:
-    # Inverte a ordem dos dados na coluna atual
-    x = df_coarse_prop[col].values[::-1]
-    # Inverte a ordem dos índices do DataFrame atual
-    y = df_coarse_prop.index.values[::-1]
-    # Calcula a regressão linear dos dados invertidos e extrai o coeficiente angular
-    coef = np.polyfit(x, y, 1)[0]
-    # Armazena o coeficiente angular no dicionário
-    coefs[col] = coef
-
-# Inicializa um dicionário para armazenar os DataFrames
-dict_text_trend = {}
-
-# Itera sobre cada coluna especificada em 'cols'
-for col in cols:
-    # Cria um DataFrame para a coluna atual e armazena no dicionário
-    dict_text_trend[col] = pd.DataFrame({col: coefs[col]}, index=[0])
+    # Cria um DataFrame com os valores
+    df_b_coeff = pd.DataFrame({'y': df_ang_coef[col], 'x': range(len(df_ang_coef[col]))})
     
+    # Calcula a covariância entre x e y
+    covariance = df_b_coeff['x'].cov(df_b_coeff['y'])
+    
+    # Calcula a variância de x
+    variance = df_b_coeff['x'].var()
+    
+    # O coeficiente angular é a covariância dividida pela variância
+    angular_coeff = covariance / variance
+    
+    # Adiciona ao dicionário final
+    ang_coef_dict[col] = angular_coeff
+    
+# cáclulo da variância de transições
+
+num_rows = len(df_ang_coef.index)  # Número de linhas em df_ang_coef
+
+dict_mean_vert_trend = {}
+
+for key, value in ang_coef_dict.items():
+    new_value = value * (num_rows - 1)  # Aplica a fórmula
+    dict_mean_vert_trend[key] = new_value  # Adiciona o novo valor ao dicionário
+
+
 # # ########################################################################
 # # ########################################################################
 # # ########################################################################
-# # ## combinação das probabilidades
+# # ## Variabilidade litológica - frequência de transição de litologia
 
-# # # Agrupamento dos resultados do teste t
-# # # Cria uma lista vazia para armazenar os nomes das variáveis
-# # var_t_result = []
+# Define as colunas que representam os modelos
+cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
 
-# # # Cria uma cópia do dicionário de variáveis globais
-# # globals_copy = dict(globals())
+# Cria uma cópia do DataFrame original para calcular as mudanças
+df_litho_change = df.copy()
 
-# # # Percorre todas as variáveis globais
-# # for var_name in globals_copy:
-# #     # Verifica se o nome da variável começa com "TT_"
-# #     if var_name.startswith("TT_"):
-# #         # Adiciona o nome da variável à lista
-# #         var_t_result.append(var_name)
+# cálculo da variabilidade média 
 
-# # # Suponha que var_list seja sua lista de nomes de variáveis
-# # var_list_t = var_t_result
+# Inicializa o dicionário final
+dict_mean_litho_change = {}
 
-# # # Cria uma lista para armazenar os dataframes
-# # dfs = []
+# # Inicializa o DataFrame intermediário
+# verificacao_numero_transicoes = pd.DataFrame()
 
-# # # Percorre todos os nomes de variáveis na lista
-# # for var_name in var_list_t:
-# #     # Acessa a variável pelo seu nome
-# #     df_var_name_TT = globals()[var_name]
-# #     # Adiciona uma nova coluna com o nome da variável
-# #     df_var_name_TT['var_name'] = var_name
-# #     # Adiciona ao dfs
-# #     dfs.append(df_var_name_TT)
+# Loop através de cada coluna/modelo
+for col in cols:
+    # Calcula a diferença entre cada valor e o valor anterior
+    diff = df_litho_change[col].diff()
+    
+    # Conta o número de mudanças (ignorando a primeira linha que será NaN devido ao cálculo da diferença "-1")
+    change_count = (diff != 0).sum()-1
+    
+    # # Adiciona a contagem de mudanças ao DataFrame intermediário
+    # verificacao_numero_transicoes[col] = [change_count]
+    
+    # Calcula o valor final como o número de mudanças dividido pelo número de camadas -1
+    final_value = change_count / (len(df_litho_change)-1)
+    
+    # Cria um DataFrame para este modelo
+    df_litho_change_value = pd.DataFrame([final_value], columns=['final_value'])
+    
+    # Adiciona ao dicionário final
+    dict_mean_litho_change[col] = df_litho_change_value
 
-# # # Concatena todos os dataframes na lista
-# # result_t_test_group = pd.concat(dfs)
+# cáclulo da variância de transições
 
-# # # Agrupamento dos resultados do teste F
-# # # Cria uma lista vazia para armazenar os nomes das variáveis
-# # var_F_result = []
 
-# # # Cria uma cópia do dicionário de variáveis globais
-# # globals_copy = dict(globals())
+dict_var_litho_change = {}
 
-# # # Percorre todas as variáveis globais
-# # for var_name in globals_copy:
-# #     # Verifica se o nome da variável começa com "TF_"
-# #     if var_name.startswith("TF_"):
-# #         # Adiciona o nome da variável à lista
-# #         var_F_result.append(var_name)
+for key, df_temp in dict_mean_litho_change.items():
+    new_df = df_temp.copy()  # Cria uma cópia do dataframe
+    new_df['final_value'] = new_df['final_value'].apply(lambda x: x * (1 - x))  # Aplica a fórmula
+    dict_var_litho_change[key] = new_df  # Adiciona o novo dataframe ao dicionário
 
-# # # Suponha que var_list seja sua lista de nomes de variáveis
-# # var_list_F = var_F_result
+   
+# ########################################################################
+# ########################################################################
+# ########################################################################
+# ## agrupamento dos dicionários
 
-# # # Cria uma lista para armazenar os dataframes
-# # dfs = []
+# limpando os nomes das linhas nos dicionários
+global_dict_copy = dict(globals())  # cria uma cópia do dicionário global
+for name_dict, value_dict in global_dict_copy.items():
+    if name_dict.startswith("dict_"):
+        new_value_dict = {}
+        for line_name, line_value in value_dict.items():
+            new_line_name = line_name.split("_")[0]  # mantém apenas caracteres iniciais, corta a partir de "_"
+            new_value_dict[new_line_name] = line_value
+        globals()[name_dict] = new_value_dict
 
-# # # Percorre todos os nomes de variáveis na lista
-# # for var_name in var_list_F:
-# #     # Acessa a variável pelo seu nome
-# #     df_var_name_TF = globals()[var_name]
-# #     # Adiciona uma nova coluna com o nome da variável
-# #     df_var_name_TF['var_name'] = var_name
-# #     # Adiciona ao dfs
-# #     dfs.append(df_var_name_TF)
+# transformando os dataframes dos dicts em floating point
+global_dict_copy = dict(globals())  # cria uma cópia do dicionário global
+for name_dict, value_dict in global_dict_copy.items():
+    if name_dict.startswith("dict_"):
+        for model_name, model_value in value_dict.items():
+            if isinstance(model_value, pd.DataFrame) and model_value.shape == (1, 1):
+                # Converte o dataframe 1x1 para float64
+                value_dict[model_name] = model_value.iloc[0, 0]
 
-# # # Concatena todos os dataframes na lista
-# # result_F_test_group = pd.concat(dfs)
+# unificando os dicionários                
+global_dict_copy = dict(globals())
 
-# # models = [ 'well_comp', 'M1_comp','M2_comp','M3_comp', 'M4_comp' ]
+# Cria um dicionário para armazenar os DataFrames
+model_dfs = {}
 
-# # # Crie uma lista de valores únicos a partir de var_name_t
-# # # t_test_unique_attribute_names = result_t_test_group['var_name'].unique().tolist()
+for name_dict, value_dict in global_dict_copy.items():
+    if name_dict.startswith("dict_"):
+        # Extrai o nome do atributo do nome do dicionário
+        atributo_name = name_dict.replace("dict_", "")
+        for model_name, model_value in value_dict.items():
+            # Se o modelo já tem um DataFrame, adiciona as novas linhas
+            if model_name in model_dfs:
+                if isinstance(model_value, pd.DataFrame):
+                    model_value['atributo'] = atributo_name  # Adiciona uma nova coluna com o nome do atributo
+                    model_dfs[model_name] = pd.concat([model_dfs[model_name], model_value], ignore_index=True)
+                else:
+                    temp_df = pd.DataFrame([model_value])
+                    temp_df['atributo'] = atributo_name  # Adiciona uma nova coluna com o nome do atributo
+                    model_dfs[model_name] = pd.concat([model_dfs[model_name], temp_df], ignore_index=True)
+            # Se o modelo não tem um DataFrame, cria um novo
+            else:
+                if isinstance(model_value, pd.DataFrame):
+                    model_value['atributo'] = atributo_name  # Adiciona uma nova coluna com o nome do atributo
+                    model_dfs[model_name] = model_value
+                else:
+                    temp_df = pd.DataFrame([model_value])
+                    temp_df['atributo'] = atributo_name  # Adiciona uma nova coluna com o nome do atributo
+                    model_dfs[model_name] = temp_df
 
-# # # Crie um dicionário para armazenar os dataframes
-# # t_test_dic = {}
-
-# # # Para cada valor único em 'models'
-# # for i, model in enumerate(models):
-# #     # Selecione as linhas correspondentes
-# #     t_test_dic[model] = result_t_test_group.iloc[i::len(models), :]
-
-# # # # Crie uma lista de valores únicos a partir de var_name
-# # # F_test_unique_attribute_names = result_F_test_group['var_name'].unique().tolist()
-
-# # # Crie um dicionário para armazenar os dataframes
-# # F_test_dic = {}
-
-# # # Para cada valor único em 'models'
-# # for i, model in enumerate(models):
-# #     # Selecione as linhas correspondentes
-# #     F_test_dic[model] = result_F_test_group.iloc[i::len(models), :]
+# Renomeia os DataFrames
+for model_name, df_temp2 in model_dfs.items():
+    globals()["atributos_" + model_name] = df_temp2
 
 # # ########################################################################
 # # ########################################################################
 # # ########################################################################
 # # ## cálculo da probabilidade com todos os atributos t e F
+
+# # separação dos atributos media e variância
+# # Cria uma cópia do dicionário de nomes globais
+# globals_copy = dict(globals())
+# # Percorre todos os nomes na cópia
+# for name, value in globals_copy.items():
+#     # Verifica se o valor é um dataframe, o nome começa com 'atributos_' e 'atributo' é uma coluna do dataframe
+#     if isinstance(value, pd.DataFrame) and name.startswith('atributos_') and 'atributo' in value.columns:
+#         # Cria o sub-dataframe 'attrib_medias' com as linhas onde 'atributo' começa com 'mean_'
+#         globals()[name + '_mean'] = value[value['atributo'].str.startswith('mean_')]
+#         # Cria o sub-dataframe 'attrib_var' com as linhas onde 'atributo' começa com 'var_'
+#         globals()[name + '_var'] = value[value['atributo'].str.startswith('var_')]
+
+
+# Copia do dicionário global
+globals_copy = globals().copy()
+
+# Lista de todos os seus dataframes que começam com 'atributos_', exceto 'atributos_well'
+dataframes = {nome: dataframe for nome, dataframe in globals_copy.items() if nome.startswith('atributos_') and nome != 'atributos_well'}
+
+resultados = []
+
+for nome, dataframe in dataframes.items():
+    # Obter o nome do modelo removendo 'atributos_' do nome da variável
+    modelo = nome.replace('atributos_', '')
+    
+    for atributo in dataframe['atributo']:
+        if atributo.startswith('mean_'):
+            t_resultado = stats.ttest_ind(globals_copy['atributos_well'][globals_copy['atributos_well']['atributo'] == atributo].iloc[:, 0], dataframe[dataframe['atributo'] == atributo].iloc[:, 0])
+            resultados.append((modelo, 't', atributo, t_resultado.statistic, t_resultado.pvalue))
+        elif atributo.startswith('var_'):
+            f_resultado = stats.f_oneway(globals_copy['atributos_well'][globals_copy['atributos_well']['atributo'] == atributo].iloc[:, 0], dataframe[dataframe['atributo'] == atributo].iloc[:, 0])
+            resultados.append((modelo, 'f', atributo, f_resultado.statistic, f_resultado.pvalue))
+
+# 'resultados' é uma lista de tuplas, onde cada tupla contém o nome do modelo, o tipo de teste ('t' ou 'f'), o nome do atributo, a estatística do teste e o valor-p
+resultados_testes_estatisticos = pd.DataFrame(resultados, columns=['modelo', 'teste', 'atributo', 'estatistica', 'valor_p'])
+
+
+
+
+# testes t
+
 
 # # # pré-cálculo do produto das probabilidades
 # # # para evitar valores tendendo a zero ou infinito, são impostos limites mínimo 0.001 e máximo 0.9 (conforme arquivo PROOF_Workflow_Boing.docx)
@@ -409,46 +446,46 @@ for col in cols:
 # # # PROOF = PROOF_pre.copy()
 # # # PROOF = 1 - product_group['Produto']
 
-# # ########################################################################
-# # ########################################################################
-# # ########################################################################
-# # ## plotagem dos perfis
+########################################################################
+########################################################################
+########################################################################
+## plotagem dos perfis
 
-# # cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
+cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
 
-# # # Mapeamento de cores
-# # cores = {1: 'green', 2: 'lightblue', 3: 'yellow', 4: 'blue', 5: 'orange', 6: 'darkblue'}
+# Mapeamento de cores
+cores = {1: 'green', 2: 'lightblue', 3: 'yellow', 4: 'blue', 5: 'orange', 6: 'darkblue'}
 
-# # # Criação da figura e dos eixos
-# # fig, axs = plt.subplots(1, len(cols), figsize=(len(cols)*3, 20))
+# Criação da figura e dos eixos
+fig, axs = plt.subplots(1, len(cols), figsize=(len(cols)*3, 20))
 
-# # # Loop sobre cada coluna
-# # for i, col in enumerate(cols):
-# #     # Seleciona os dados
-# #     x = df[col]
-# #     y = df['profundidade']
+# Loop sobre cada coluna
+for i, col in enumerate(cols):
+    # Seleciona os dados
+    x = df[col]
+    y = df['profundidade']
     
-# #     # Cria o gráfico de barras com as cores correspondentes
-# #     axs[i].barh(y, x, color=[cores[val] for val in x])
+    # Cria o gráfico de barras com as cores correspondentes
+    axs[i].barh(y, x, color=[cores[val] for val in x])
     
-# #     # Inverte o eixo y para que a profundidade aumente para baixo
-# #     axs[i].invert_yaxis()
+    # Inverte o eixo y para que a profundidade aumente para baixo
+    axs[i].invert_yaxis()
     
-# #     # Define o título do subplot
-# #     axs[i].set_title(col)
+    # Define o título do subplot
+    axs[i].set_title(col)
     
-# #     # Define o intervalo do eixos
-# #     axs[i].set_yticks(np.arange(0, max(y)+1, 1))  # Intervalo de 1 uni
-# #     axs[i].set_xticks(np.arange(0, max(x)+1, 1))  # Intervalo de 1 uni
+    # Define o intervalo do eixos
+    axs[i].set_yticks(np.arange(0, max(y)+1, 1))  # Intervalo de 1 uni
+    axs[i].set_xticks(np.arange(0, max(x)+1, 1))  # Intervalo de 1 uni
 
-# # # Mostra a figura
-# # plt.tight_layout()
-# # plt.show()
+# Mostra a figura
+plt.tight_layout()
+plt.show()
 
-# # # Marca o tempo de término
-# # fim = time.time()
-# # # Calcula a diferença
-# # tempo_decorrido = fim - inicio
-# # print(f"O tempo decorrido foi de {tempo_decorrido} segundos.")
+# Marca o tempo de término
+fim = time.time()
+# Calcula a diferença
+tempo_decorrido = fim - inicio
+print(f"O tempo decorrido foi de {tempo_decorrido} segundos.")
 
 
