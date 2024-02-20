@@ -215,69 +215,6 @@ atrib_sqrt_mean_thick.columns = atrib_sqrt_mean_thick.columns.str.replace('_numb
 
 
 
-'''
-dict_mean_sqrt_thick = {} # Crie um dicionário para armazenar os dataframes
-
-for col in cols:
-    # Calcule a média
-    average = np.average(atrib_sqrt_mean_thick[col])
-       
-    # Crie um novo dataframe com a média 
-    dict_mean_sqrt_thick[col] = pd.DataFrame([average], columns=[col])
-
-dict_var_sqrt_thick = {} # Crie um dicionário para armazenar os dataframes
-
-for col in cols:
-    # Calcule a variância
-    variance = np.var(atrib_sqrt_mean_thick[col])
-       
-    # Crie um novo dataframe com a média ponderada
-    dict_var_sqrt_thick[col] = pd.DataFrame([variance], columns=[col])
-
-#######################################################################
-#######################################################################
-#######################################################################
-# tendência de variação granulométrica vertical
-# adotando as classes texturais 1, 3 e 5
-# para fins de desenvolvimento e apresentação da PROOF em artigo
-# a tendência de variação textural será calculada para o poço como um todo
-# e não por sequência (isso será feito no artigo)
-
-cols = ['well_text', 'M1_text', 'M2_text', 'M3_text', 'M4_text']
-
-df_ang_coef = df.copy()
-
-# Inicializa o dicionário final
-ang_coef_dict = {}
-
-# cálculod do coeficiente angular - Loop através de cada coluna/modelo
-for col in cols:
-    # Cria um DataFrame com os valores
-    df_b_coeff = pd.DataFrame({'y': df_ang_coef[col], 'x': range(len(df_ang_coef[col]))})
-    
-    # Calcula a covariância entre x e y
-    covariance = df_b_coeff['x'].cov(df_b_coeff['y'])
-    
-    # Calcula a variância de x
-    variance = df_b_coeff['x'].var()
-    
-    # O coeficiente angular é a covariância dividida pela variância
-    angular_coeff = covariance / variance
-    
-    # Adiciona ao dicionário final
-    ang_coef_dict[col] = angular_coeff
-    
-# cáclulo da variância de transições
-
-num_rows = len(df_ang_coef.index)  # Número de linhas em df_ang_coef
-
-dict_mean_vert_trend = {}
-
-for key, value in ang_coef_dict.items():
-    new_value = value * (num_rows - 1)  # Aplica a fórmula
-    dict_mean_vert_trend[key] = new_value  # Adiciona o novo valor ao dicionário
-'''
-
 
 # # ########################################################################
 # # ########################################################################
@@ -383,6 +320,45 @@ for df_name, df_atributos in atributos_dict.items():
 
     # Adiciona os resultados ao dicionário geral
     statistical_tests_results[df_name] = resultados_modelos
+   
+########################################################################
+########################################################################
+########################################################################
+## Organização dos resultados
+
+# Organizando as informações
+resultado_sintetizado = {}
+
+for atributo, modelos in statistical_tests_results.items():
+    resultado_sintetizado[atributo] = {}
+    for modelo in modelos:
+        modelo_atual = modelo['modelo_atual']
+        if modelo_atual not in resultado_sintetizado[atributo]:
+            resultado_sintetizado[atributo][modelo_atual] = {
+                't_statistic': [],
+                't_p_value': [],
+                'f_statistic': [],
+                'f_p_value': [],
+            }
+        resultado_sintetizado[atributo][modelo_atual]['t_statistic'].append(modelo['t_statistic'])
+        resultado_sintetizado[atributo][modelo_atual]['t_p_value'].append(modelo['t_p_value'])
+        resultado_sintetizado[atributo][modelo_atual]['f_statistic'].append(modelo['f_statistic'])
+        resultado_sintetizado[atributo][modelo_atual]['f_p_value'].append(modelo['f_p_value'])
+
+#####
+
+# Criando o DataFrame
+rows = []
+
+for atributo, modelos in resultado_sintetizado.items():
+    for modelo_atual, estatisticas in modelos.items():
+        row = {'Atributo': atributo, 'Modelo Atual': modelo_atual}
+        row.update({f'Média {key}': sum(values) / len(values) for key, values in estatisticas.items()})
+        rows.append(row)
+
+statistical_results_final = pd.DataFrame(rows)
+statistical_results_final.columns = statistical_results_final.columns.str.replace('Média ', '')
+
 
 ########################################################################
 ########################################################################
