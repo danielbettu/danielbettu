@@ -6,11 +6,10 @@ Created on Thu Feb  1 17:04:58 2024
 """
 import time
 import pandas as pd
-from scipy import stats
 from scipy.stats import ttest_ind, f_oneway
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
+
 
 
 # Marca o tempo de início
@@ -43,29 +42,6 @@ def most_frequent_and_max(s):
 
 atrib_litho_dom = df.groupby('layer')[cols].agg(most_frequent_and_max).reset_index() # litologia dominante em cada layer
 atrib_litho_dom.columns = atrib_litho_dom.columns.str.replace('_text', '')
-
-
-
-'''
-dict_mean_atrib_litho_dom = {} # Crie um dicionário para armazenar os dataframes
-
-for col in cols:
-    # Calcule a média ponderada usando os valores em thick_sum_layer como pesos
-    weighted_avg = np.average(atrib_litho_dom[col], weights=np.sqrt(thick_sum_layer))
-       
-    # Crie um novo dataframe com a média ponderada
-    dict_mean_atrib_litho_dom[col] = pd.DataFrame([weighted_avg], columns=[col])
-    
-dict_var_atrib_litho_dom = {} # Crie um dicionário para armazenar os dataframes
-
-for col in cols:
-    # Calcule a variância
-    variance = np.var(atrib_litho_dom[col])
-       
-    # Crie um novo dataframe com a média ponderada
-    dict_var_atrib_litho_dom[col] = pd.DataFrame([variance], columns=[col])
-'''
-
     
 ########################################################################
 ########################################################################
@@ -93,32 +69,6 @@ def calc_prop(x):
 # A função reset_index é usada para transformar 'layer' de um índice para uma coluna regular
 atrib_terr_prop = df.groupby('layer')[cols].apply(calc_prop).reset_index()
 atrib_terr_prop.columns = atrib_terr_prop.columns.str.replace('_comp', '')
-
-
-
-'''
-dict_mean_atrib_terr_prop = {} # Crie um dicionário para armazenar os dataframes
-
-for col in cols:
-    # Calcule a média ponderada usando os valores em thick_sum_layer como pesos
-    weighted_avg = np.average(atrib_terr_prop[col], weights=np.sqrt(thick_sum_layer))
-       
-    # Crie um novo dataframe com a média ponderada
-    dict_mean_atrib_terr_prop[col] = pd.DataFrame([weighted_avg], columns=[col])
-
-dict_var_atrib_terr_prop = {} # Crie um dicionário para armazenar os dataframes
-
-for col in cols:
-    # Calcule a variância
-    variance = np.var(atrib_terr_prop[col])
-       
-    # Crie um novo dataframe com a média ponderada
-    dict_var_atrib_terr_prop[col] = pd.DataFrame([variance], columns=[col])
-    
-    
-    
-'''
-
     
 ########################################################################
 ########################################################################
@@ -136,32 +86,6 @@ atrib_bat_mean.columns = atrib_bat_mean.columns.str.replace('_bat', '')
 atrib_bat_mean.insert(0, 'layer_number', atrib_bat_mean.index)
 atrib_bat_mean.columns = atrib_bat_mean.columns.str.replace('_number', '')
 
-
-'''
-dict_mean_bat = {} # Crie um dicionário para armazenar os dataframes
-
-for col in cols:
-    # Calcule a média 
-    average = np.average(atrib_bat_mean[col])
-       
-    # Crie um novo dataframe com a média 
-    dict_mean_bat[col] = pd.DataFrame([average], columns=[col])
-
-
-    
-    
-dict_var_bat = {} # Crie um dicionário para armazenar os dataframes
-
-for col in cols:
-    # Calcule a variância
-    variance = np.var(atrib_bat_mean[col])
-       
-    # Crie um novo dataframe com a média ponderada
-    dict_var_bat[col] = pd.DataFrame([variance], columns=[col])
-
-
-
-'''
 ########################################################################
 ########################################################################
 ########################################################################
@@ -181,20 +105,22 @@ for grupo in grupos:
 
 def count_sequences(s):
     return (s != s.shift()).cumsum().value_counts()
-# s.shift(): Este método desloca os índices de uma Série pandas 's' por um número especificado de períodos, que é 1 por padrão. 
-# Isso significa que cada elemento em 's' é movido para baixo por uma posição, e o primeiro elemento é substituído por NaN.
 
-# s != s.shift(): Esta linha de código compara cada elemento em 's' com o elemento abaixo dele (devido ao deslocamento). 
-# Se os dois elementos forem diferentes, o resultado é True; se forem iguais, o resultado é False. 
-# Isso retorna uma nova Série de valores booleanos do mesmo tamanho que 's'.
+'''
+s.shift(): Este método desloca os índices de uma Série pandas 's' por um número especificado de períodos, que é 1 por padrão. 
+Isso significa que cada elemento em 's' é movido para baixo por uma posição, e o primeiro elemento é substituído por NaN.
 
-# (s != s.shift()).cumsum(): O método cumsum() é aplicado à Série booleana, que retorna a soma cumulativa dos valores. 
-# Em outras palavras, ele adiciona os valores True (considerados como 1) à medida que avança pela Série.
+s != s.shift(): Esta linha de código compara cada elemento em 's' com o elemento abaixo dele (devido ao deslocamento). 
+Se os dois elementos forem diferentes, o resultado é True; se forem iguais, o resultado é False. 
+Isso retorna uma nova Série de valores booleanos do mesmo tamanho que 's'.
 
-# (s != s.shift()).cumsum().value_counts(): Por fim, o método value_counts() conta a ocorrência de cada valor único na Série cumsum. 
-# Isso retorna uma nova Série onde o índice é o valor único da Série original e o valor é a contagem de ocorrências desse valor.
-# Em resumo, este código está contando a frequência de sequências consecutivas de valores idênticos na Série 's'.
+(s != s.shift()).cumsum(): O método cumsum() é aplicado à Série booleana, que retorna a soma cumulativa dos valores. 
+Em outras palavras, ele adiciona os valores True (considerados como 1) à medida que avança pela Série.
 
+(s != s.shift()).cumsum().value_counts(): Por fim, o método value_counts() conta a ocorrência de cada valor único na Série cumsum. 
+Isso retorna uma nova Série onde o índice é o valor único da Série original e o valor é a contagem de ocorrências desse valor.
+Em resumo, este código está contando a frequência de sequências consecutivas de valores idênticos na Série 's'.
+'''
 mean_values = {}
 
 for key, df_mean_thick in dfs.items():  # Altera df para df_mean_thick
@@ -213,7 +139,44 @@ atrib_sqrt_mean_thick = atrib_sqrt_mean_thick.applymap(np.sqrt) # Atualiza todas
 atrib_sqrt_mean_thick.insert(0, 'layer_number', atrib_sqrt_mean_thick.index)
 atrib_sqrt_mean_thick.columns = atrib_sqrt_mean_thick.columns.str.replace('_number', '')
 
+#######################################################################
+#######################################################################
+#######################################################################
+# tendência de variação granulométrica vertical
+# adotando as classes texturais 1, 3 e 5
+# para fins de desenvolvimento e apresentação da PROOF em artigo
+# a tendência de variação textural será calculada para o poço como um todo
+# e não por sequência (isso será feito no artigo)
 
+cols = ['well_text', 'M1_text', 'M2_text', 'M3_text', 'M4_text']
+
+df_ang_coef = df.copy()
+
+# Inicializa o dicionário final
+ang_coef_dict = {}
+
+# cálculo do coeficiente angular - Loop através de cada coluna/modelo
+for col in cols:
+    # Cria um DataFrame com os valores
+    df_b_coeff = pd.DataFrame({'y': df_ang_coef[col], 'x': range(len(df_ang_coef[col]))})
+    
+    # Calcula a covariância entre x e y
+    covariance = df_b_coeff['x'].cov(df_b_coeff['y'])
+    
+    # Calcula a variância de x
+    variance = df_b_coeff['x'].var()
+    
+    # O coeficiente angular é a covariância dividida pela variância
+    angular_coeff = covariance / variance
+    
+    # Adiciona ao dicionário final
+    ang_coef_dict[col] = angular_coeff
+    
+# Criando o DataFrame transposto com índice
+atrib_text_trend = pd.DataFrame.from_dict(ang_coef_dict, orient='index')
+atrib_text_trend = atrib_text_trend.rename(columns={atrib_text_trend.columns[0]: 'text_trend'})
+atrib_text_trend =atrib_text_trend.T
+atrib_text_trend.columns = atrib_text_trend.columns.str.replace('_text', '')
 
 
 # # ########################################################################
@@ -265,6 +228,7 @@ atrib_variab_litho.columns = atrib_variab_litho.columns.str.replace('_comp_chang
 ########################################################################
 ########################################################################
 ## agrupando os dataframes em um dicionário de atributos por layer
+
 # Obtém uma cópia de todas as variáveis no ambiente de trabalho
 all_variables = dict(globals())
 
@@ -288,6 +252,7 @@ for df_name in atrib_names:
 ########################################################################
 ########################################################################
 ## testes estatísticos
+
 # Dicionário para armazenar os resultados dos testes
 statistical_tests_results = {}
 
@@ -326,7 +291,6 @@ for df_name, df_atributos in atributos_dict.items():
 ########################################################################
 ## Organização dos resultados
 
-# Organizando as informações
 resultado_sintetizado = {}
 
 for atributo, modelos in statistical_tests_results.items():
@@ -345,8 +309,6 @@ for atributo, modelos in statistical_tests_results.items():
         resultado_sintetizado[atributo][modelo_atual]['f_statistic'].append(modelo['f_statistic'])
         resultado_sintetizado[atributo][modelo_atual]['f_p_value'].append(modelo['f_p_value'])
 
-#####
-
 # Criando o DataFrame
 rows = []
 
@@ -358,7 +320,6 @@ for atributo, modelos in resultado_sintetizado.items():
 
 statistical_results_final = pd.DataFrame(rows)
 statistical_results_final.columns = statistical_results_final.columns.str.replace('Média ', '')
-
 
 ########################################################################
 ########################################################################
