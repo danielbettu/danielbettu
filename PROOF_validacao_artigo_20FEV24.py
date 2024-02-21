@@ -17,8 +17,8 @@ inicio = time.time()
 
 # Carregar dados do arquivo de entrada em txt
 # df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
-# df = pd.read_csv('C:/Python/PROOF_pocos_validacao.csv', sep= ";", header= 0)
-df = pd.read_csv('/home/bettu/Documents/Python/PROOF/PROOF_pocos_validacao.csv', sep= ",", header= 0)
+df = pd.read_csv('C:/Python/PROOF_pocos_validacao.csv', sep= ",", header= 0)
+# df = pd.read_csv('/home/bettu/Documents/Python/PROOF/PROOF_pocos_validacao.csv', sep= ",", header= 0)
 
 #######################################################################
 #######################################################################
@@ -151,7 +151,7 @@ atrib_sqrt_mean_thick.columns = atrib_sqrt_mean_thick.columns.str.replace('_numb
 cols = ['well_text', 'M1_text', 'M2_text', 'M3_text', 'M4_text']
 
 df_ang_coef = df.copy()
-
+'''
 # Inicializa o dicionário final
 ang_coef_dict = {}
 
@@ -177,7 +177,56 @@ atrib_text_trend = pd.DataFrame.from_dict(ang_coef_dict, orient='index')
 atrib_text_trend = atrib_text_trend.rename(columns={atrib_text_trend.columns[0]: 'text_trend'})
 atrib_text_trend =atrib_text_trend.T
 atrib_text_trend.columns = atrib_text_trend.columns.str.replace('_text', '')
+'''
+# Criando uma coluna 'group' com base na numeração de 'layer'
+df_ang_coef['group'] = df_ang_coef['layer'].apply(lambda x: 1 if x in [1, 2, 3, 4, 5] else 2)
 
+# Inicializa o dicionário final para cada grupo
+ang_coef_dict_group1 = {}
+ang_coef_dict_group2 = {}
+
+# Loop através de cada coluna/modelo
+for col in cols:
+    # Filtra os dados para cada grupo
+    group1_data = df_ang_coef[df_ang_coef['group'] == 1][col]
+    group2_data = df_ang_coef[df_ang_coef['group'] == 2][col]
+    
+    # Cria DataFrames com os valores para cada grupo
+    df_b_coeff_group1 = pd.DataFrame({'y': group1_data, 'x': range(len(group1_data))})
+    df_b_coeff_group2 = pd.DataFrame({'y': group2_data, 'x': range(len(group2_data))})
+    
+    # Calcula a covariância entre x e y para cada grupo
+    covariance_group1 = df_b_coeff_group1['x'].cov(df_b_coeff_group1['y'])
+    covariance_group2 = df_b_coeff_group2['x'].cov(df_b_coeff_group2['y'])
+    
+    # Calcula a variância de x para cada grupo
+    variance_group1 = df_b_coeff_group1['x'].var()
+    variance_group2 = df_b_coeff_group2['x'].var()
+    
+    # Coeficientes angulares para cada grupo
+    angular_coeff_group1 = covariance_group1 / variance_group1
+    angular_coeff_group2 = covariance_group2 / variance_group2
+    
+    # Adiciona ao dicionário final para cada grupo
+    ang_coef_dict_group1[col] = angular_coeff_group1
+    ang_coef_dict_group2[col] = angular_coeff_group2
+
+# Criando os DataFrames transpostos com índice para cada grupo
+atributo_text_trend_UP = pd.DataFrame.from_dict(ang_coef_dict_group1, orient='index')
+atributo_text_trend_LW = pd.DataFrame.from_dict(ang_coef_dict_group2, orient='index')
+
+# Renomeando as colunas
+atributo_text_trend_UP = atributo_text_trend_UP.rename(columns={atributo_text_trend_UP.columns[0]: 'text_trend_group1'})
+atributo_text_trend_LW = atributo_text_trend_LW.rename(columns={atributo_text_trend_LW.columns[0]: 'text_trend_group2'})
+
+# Concatenando os resultados finais
+atrib_text_trend = pd.concat([atributo_text_trend_UP, atributo_text_trend_LW], axis=1)
+atrib_text_trend =  atrib_text_trend.T
+atrib_text_trend.columns = atrib_text_trend.columns.str.replace('_text', '')
+
+
+# Exibindo o resultado
+atrib_text_trend
 
 # # ########################################################################
 # # ########################################################################
