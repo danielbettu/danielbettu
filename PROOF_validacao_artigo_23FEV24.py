@@ -145,7 +145,14 @@ atrib_sqrt_mean_thick['layer'] = atrib_sqrt_mean_thick['layer'].astype('float64'
 df_ang_coef = df.copy()
 
 # Criando uma coluna 'group' com base na numeração de 'layer'
-df_ang_coef['group'] = df_ang_coef['layer'].apply(lambda x: 1 if x in [1, 2, 3, 4, 5] else 2)
+valores_unicos_layer = df_ang_coef['layer'].unique()
+
+# Calcule a mediana dos valores únicos da coluna 'layer'
+mediana_layer = np.median(df_ang_coef['layer'].unique())
+
+# Ajuste a coluna 'group' com base na mediana
+df_ang_coef['group'] = df_ang_coef['layer'].apply(lambda x: 1 if x <= mediana_layer else 2)
+
 
 # Inicializa o dicionário final para cada grupo
 ang_coef_dict_group1 = {}
@@ -343,7 +350,7 @@ statistical_results_final['t_p_value'] = np.where(statistical_results_final['t_p
 statistical_results_final['t_p_value'] = np.where(statistical_results_final['t_p_value'] > 0.92151, 0.92151, statistical_results_final['t_p_value'])
 statistical_results_final['f_p_value'] = np.where(statistical_results_final['f_p_value'] < 0.0052, 0.0052, statistical_results_final['f_p_value'])
 statistical_results_final['f_p_value'] = np.where(statistical_results_final['f_p_value'] > 0.92151, 0.92151, statistical_results_final['f_p_value'])
-
+ 
 # Lista de nomes de modelos únicos presentes na coluna 'modelo_atual'
 modelos = statistical_results_final['modelo_atual'].unique()
 
@@ -386,9 +393,6 @@ for modelo in modelos:
     resultados = resultados.append({'modelo_atual': modelo, 'prob(U|E)': prob_U_E, 'prob(nU|E)': prob_nU_E}, ignore_index=True)
 
 resultados_intermediários = resultados.copy()
-
-
-
 
 ######################################################
 # Subtrair um valor específico de 'resultado' e manter a primeira coluna de strings intacta
@@ -441,3 +445,4 @@ fim = time.time()
 # Calcula a diferença
 tempo_decorrido = fim - inicio
 print(f"O tempo decorrido foi de {tempo_decorrido} segundos.")
+ 
