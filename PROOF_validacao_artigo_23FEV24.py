@@ -402,7 +402,7 @@ resultados['prob(U|E)'] = np.where(resultados['prob(U|E)'].apply(type) == str, r
 # Atribuir o resultado a PROOF
 PROOF = resultados
 PROOF = PROOF.rename(columns={'prob(U|E)': 'PROOF'})
-
+PROOF = PROOF.drop('prob(nU|E)', axis=1)
 
 ########################################################################
 ########################################################################
