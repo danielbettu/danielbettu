@@ -7,8 +7,10 @@ Created on Thu Feb  1 17:04:58 2024
 import time
 import pandas as pd
 from scipy.stats import ttest_ind, f_oneway
+from scipy import stats
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 # Marca o tempo de início
 inicio = time.time()
@@ -28,22 +30,7 @@ df_litho = df.copy()
 # grouped = df_litho.groupby('layer')
 thick_sum_layer = df_litho['espessura'].sum() # Calculando o somatório da coluna 'espessura' 
 
-# # Função para encontrar o valor mais comum em cada coluna
-# def most_frequent_and_max(s):
-#     counts = s.value_counts()
-#     max_count = counts.max()
-#     most_frequent_values = counts[counts == max_count].index
-#     return most_frequent_values.max()
-
 cols = ['well_text','M1_text', 'M2_text', 'M3_text', 'M4_text']
-
-# atrib_litho_dom = df_litho[cols].agg(most_frequent_and_max).reset_index() # litologia dominante 
-# atrib_litho_dom = df_litho.groupby('layer')[cols].agg(most_frequent_and_max).reset_index() # litologia dominante em cada layer
-# atrib_litho_dom.columns = atrib_litho_dom.columns.str.replace('_text', '')
-
-# # Realize o merge usando a coluna 'layer' como chave
-# merged_atrib_litho_dom = pd.merge(atrib_litho_dom, thick_sum_layer, on='layer')
-# medias_atributo = merged_atrib_litho_dom.copy() 
 
 atributo = df_litho[cols]
 espessura = df_litho['espessura']
@@ -148,172 +135,55 @@ for key, value in pre_var_terr_prop.items():
 ########################################################################
 ########################################################################
 ########################################################################
-## faixa batimétrica média
+## faixa batimétrica média do poço
 
 cols = ['well_bat', 'M1_bat', 'M2_bat', 'M3_bat', 'M4_bat']
 
 mean_bat = df[cols].mean() # Calcula a média para o poço e cria um novo DataFrame
 var_bat = df[cols].var() # calcula a variância
+mean_bat.index = mean_bat.index.str.replace('_bat', '')
 var_bat.index = var_bat.index.str.replace('_bat', '')
-# atrib_bat_mean.columns = atrib_bat_mean.columns.str.replace('_bat', '') # Remove o sufixo '_bat' dos nomes das colunas
-# atrib_bat_mean.insert(0, 'layer_number', atrib_bat_mean.index) # Adiciona uma nova coluna contendo o número dos layers
-# atrib_bat_mean.columns = atrib_bat_mean.columns.str.replace('_number', '')
-
-# def calcular_media(medias_atributo, cols):
-#     medias = {}
-#     for col in cols:
-#         medias[col] = np.mean(medias_atributo[col])
-#     return medias
-
-# # Aplicação da função calcular_media
-# medias_atributo = atrib_bat_mean.copy()
-# pre_mean_bat = calcular_media(medias_atributo, cols)
-
-# #renomeando as linhas do dict
-# mean_bat = {}
-# for key, value in pre_mean_bat.items():
-#     new_key = key.replace("_bat", "")  # Remove '_comp' da chave
-#     mean_bat[new_key] = value
-    
-# # Inicializar o dicionário
-# pre_var_bat = {}
-
-# # Iterar sobre os modelos
-# for col in cols:
-#     # Obter a média do modelo
-#     mean = pre_mean_bat[col]
-#     # Calcular a soma dos quadrados das diferenças
-#     sum_sq_diff = sum((atrib_bat_mean[col] - mean)**2)
-#     # Calcular o valor para o modelo
-#     value = sum_sq_diff / (atrib_bat_mean[col].count() - 1)
-#     # Verificar se value é menor que 0.8*mean
-#     if value < 0.8*mean:
-#         value = 0.8*mean
-#     # Adicionar ao dicionário
-#     pre_var_bat[col] = value
-    
-# #renomeando as linhas do dict
-# mean_bat = {}
-# for key, value in pre_mean_bat.items():
-#     new_key = key.replace("_bat", "")  # Remove '_bat' da chave
-#     mean_bat[new_key] = value
-
-# var_bat = {}
-# for key, value in pre_var_bat.items():
-#     new_key = key.replace("_bat", "")  # Remove '_bat' da chave
-#     var_bat[new_key] = value
-    
 
 ########################################################################
 ########################################################################
 ########################################################################
-## espessura média das camadas
+## espessura média das camadas no poço
 
-def calculate_changes_and_sum(df, cols):
-    # Verifica mudança de valor na sequência de registros (exceto o primeiro)
-    mask = (df[cols] != df[cols].shift()) & ~df[cols].isna()
-    
-    # Calcula a quantidade de mudanças de valor em cols
-    changes_count = mask.any(axis=1).sum()
-    
-    # Calcula o valor acumulado da 'espessura' para cada sequência de mesmo valor em cols
-    df['accumulated_thickness'] = df['espessura'].groupby(mask.any(axis=1).cumsum()).cumsum()
-    
-    # Soma os valores da coluna 'espessura' correspondentes a cada sequência de mesmo valor em cols
-    sum_thickness = df.groupby(mask.any(axis=1).cumsum())['accumulated_thickness'].last().sum()
-    
-    return changes_count, sum_thickness
-
-# Exemplo de uso
-cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
-
-# Chame a função com seu DataFrame e a lista de colunas
-changes_count, sum_thickness = calculate_changes_and_sum(df, cols)
-
-
-'''
-# Dicionário para armazenar os resultados
-result_dict = {}
-
-for key in cols:
-    # Seleciona as colunas específicas e a coluna 'espessura' do DataFrame original
-    selected_cols = [key] + ['espessura']
-    df_subset = df[selected_cols]
-    
-    # Aplica a função calculate_mean_thickness para cada conjunto de colunas
-    result = calculate_mean_thickness(df_subset)
-    
-    # Armazena o resultado no dicionário
-    result_dict[key] = result
-
-# Cria uma Série a partir do dicionário
-mean_sqrt_thick = pd.Series(result_dict)
-'''
-
-'''
-# # agrupar valores unicos do 'layer'
-# grupos = df['layer'].unique()
-
-# Cria um dicionário para armazenar os dataframes
-# dfs = {}
-
-# for grupo in grupos:
-#     # Cria um novo dataframe para cada grupo
-#     dfs[str(grupo)] = df[df['layer'] == grupo].copy()  # Adiciona .copy() para criar uma cópia
-
-# s.shift(): Este método desloca os índices de uma Série pandas 's' por um número especificado de períodos, que é 1 por padrão. 
-# Isso significa que cada elemento em 's' é movido para baixo por uma posição, e o primeiro elemento é substituído por NaN.
-
-# s != s.shift(): Esta linha de código compara cada elemento em 's' com o elemento abaixo dele (devido ao deslocamento). 
-# Se os dois elementos forem diferentes, o resultado é True; se forem iguais, o resultado é False. 
-# Isso retorna uma nova Série de valores booleanos do mesmo tamanho que 's'.
-
-# (s != s.shift()).cumsum(): O método cumsum() é aplicado à Série booleana, que retorna a soma cumulativa dos valores. 
-# Em outras palavras, ele adiciona os valores True (considerados como 1) à medida que avança pela Série.
-
-# (s != s.shift()).cumsum().value_counts(): Por fim, o método value_counts() conta a ocorrência de cada valor único na Série cumsum. 
-# Isso retorna uma nova Série onde o índice é o valor único da Série original e o valor é a contagem de ocorrências desse valor.
-# Em resumo, este código está contando a frequência de sequências consecutivas de valores idênticos na Série 's'.
-
+cols = ['well_comp', 'M1_comp','M2_comp','M3_comp', 'M4_comp']
+# Função para contar sequências consecutivas
 def count_sequences(s):
     return (s != s.shift()).cumsum().value_counts()
 
-cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
+# Dicionário para armazenar os valores médios
+dict_mean_values = {}
+temp_dfs = {}  # Dicionário para armazenar os DataFrames temporários
 
-count_values = {}
-
-for key, df_mean_thick in df[cols]:  # Altera df para df_mean_thick
-    counts = {}
-    for col in cols:
-        sequences = count_sequences(df_mean_thick[col])  # Altera df para df_mean_thick
-        counts[col] = sequences.mean()
-    count_values[key] = counts
-
-# Convertendo o dicionário em um DataFrame
-atrib_mean_thick = pd.DataFrame(count_values).T
-# atrib_sqrt_mean_thick = atrib_mean_thick.copy()
-# atrib_sqrt_mean_thick.columns = atrib_sqrt_mean_thick.columns.str.replace('_comp', '')
-# atrib_sqrt_mean_thick = atrib_sqrt_mean_thick.applymap(np.sqrt) # Atualiza todas as colunas do dataframe atrib_sqrt_mean_thick para que contenham o valor da raiz quadrada do valor original
-# # Adiciona uma nova coluna contendo o número dos layers
-# atrib_sqrt_mean_thick.insert(0, 'layer_number', atrib_sqrt_mean_thick.index)
-# atrib_sqrt_mean_thick.columns = atrib_sqrt_mean_thick.columns.str.replace('_number', '')
-# atrib_sqrt_mean_thick['layer'] = atrib_sqrt_mean_thick['layer'].astype('float64')
-
-# Inicializar o dicionário
-pre_mean_sqrt_thick = {}
-# Iterar sobre os modelos
 for col in cols:
-    # Calcular a soma da raiz quadrada
-    sum_sqrt = np.sum(np.sqrt(atrib_mean_thick[col]))
-    # Calcular a média
-    mean = sum_sqrt / atrib_mean_thick[col].count()
-    # Adicionar ao dicionário
-    pre_mean_sqrt_thick[col] = mean
+    # Calcula as sequências para cada coluna
+    sequences = count_sequences(df[col])
+    
+    # Calcula a espessura acumulada para cada sequência
+    accumulated_thickness = sequences * df['espessura']
+    
+    # Calcula a raiz quadrada da espessura acumulada
+    sqrt_accumulated_thickness = np.sqrt(accumulated_thickness)
+    
+    # Calcula a média da raiz quadrada da espessura
+    dict_mean_values[col] = sqrt_accumulated_thickness.mean()
+    
+    # Cria um DataFrame temporário para cada coluna
+    temp_dfs[col] = pd.DataFrame({
+        'Sequences': sequences,
+        'Accumulated_Thickness': accumulated_thickness,
+        'Sqrt_Thickness': sqrt_accumulated_thickness
+    })
 
-mean_sqrt_thick = {}
-for key, value in pre_mean_sqrt_thick.items():
-    new_key = key.replace("_comp", "")  # Remove '_bat' da chave
-    mean_sqrt_thick[new_key] = value
+# Cria uma série com os valores médios
+mean_sqrt_thickness = pd.Series(dict_mean_values)
+mean_sqrt_thickness.index = mean_sqrt_thickness.index.str.replace('_comp', '')
+
+# Combine os DataFrames temporários em um único DataFrame
+combined_temp_df = pd.concat(temp_dfs.values(), axis=1)
 
 #######################################################################
 #######################################################################
@@ -409,75 +279,118 @@ mean_trend_text_LW.drop(first_index, inplace=True) # Remova a primeira linha
 # # ########################################################################
 # # ## Variabilidade litológica - frequência de transição de litologia
 
+# Create a copy of df_litho_change
 df_litho_change = df.copy()
 
-# cálculo da variabilidade média 
-
-# Lista para armazenar os DataFrames temporários
+# List to store temporary DataFrames
 temp_dfs = []
 
+# Columns of interest
 cols = ['well_comp', 'M1_comp', 'M2_comp', 'M3_comp', 'M4_comp']
 
-# Loop sobre as colunas
+# Loop over the columns
 for col in cols:
-    # Agrupa os resultados pela coluna 'layer'
-    grouped_by_layer = df_litho_change.groupby('layer')[col]
+    # Calculate the difference between each value and the previous value within each group
+    diff_by_layer = df_litho_change[col].diff()
 
-    # Calcula a diferença entre cada valor e o valor anterior dentro de cada grupo
-    diff_by_layer = grouped_by_layer.diff()
-
-    # Desconsidera a primeira linha de cada camada
+    # Disregard the first row of each layer
     diff_by_layer[df_litho_change['layer'] != df_litho_change['layer'].shift()] = 0
 
-    # Conta o número de mudanças dentro de cada camada
-    change_count_by_layer = diff_by_layer.ne(0).groupby(df_litho_change['layer']).sum()
+    # Count the number of changes within each layer
+    change_count_by_layer = diff_by_layer.ne(0).sum()
 
-    # Cria um DataFrame temporário
+    # Create a temporary DataFrame with an index
     temp_df = pd.DataFrame({
         f'{col}_change_count_by_layer': change_count_by_layer
-    })
+    }, index=df_litho_change.index)
 
-    # Adiciona o DataFrame temporário à lista
+    # Add the temporary DataFrame to the list
     temp_dfs.append(temp_df)
 
-# Combina os DataFrames temporários em um único DataFrame
+# Combine the temporary DataFrames into a single DataFrame
 atrib_variab_litho = pd.concat(temp_dfs, axis=1)
-
-# Adiciona a coluna 'layer' na primeira posição do DataFrame final
-atrib_variab_litho.insert(0, 'layer', change_count_by_layer.index)
 atrib_variab_litho.columns = atrib_variab_litho.columns.str.replace('_comp_change_count_by_layer', '')
-atrib_variab_litho.set_index('layer', inplace=True)
-
-
+atrib_variab_litho = atrib_variab_litho.T
+numero_transicoes = atrib_variab_litho[0].squeeze()
+numero_transicoes -= 1
+# Calcula o comprimento da série (número de elementos)
+length_numero_transicoes = len(df)
+# Calcula a nova série 'mean_litho_trans'
+mean_litho_trans = numero_transicoes / (length_numero_transicoes - 1)
+var_litho_trans = mean_litho_trans * (1 - mean_litho_trans)
 
 ########################################################################
 ########################################################################
 ########################################################################
-## agrupando os dataframes em um dicionário de atributos por layer
+## agrupando as séries de médias e atributos por layer
 
-# Obtém uma cópia de todas as variáveis no ambiente de trabalho
-all_variables = dict(globals())
+# Filtrar as variáveis globais que começam com 'mean_' ou 'var_'
+selected_variables = {}
 
-# Dicionário para armazenar os DataFrames que começam com "atrib_"
-atributos_dict = {}
+# Criar cópia do dicionário antes de iterar
+globals_copy = dict(globals())
 
-# Lista para armazenar temporariamente os nomes das variáveis que atendem à condição
-atrib_names = []
+for k, v in globals_copy.items():
+    if isinstance(v, (pd.Series, dict)) and (k.startswith('mean_') or k.startswith('var_')):
+        selected_variables[k] = v
 
-for var_name in all_variables:
-    if var_name.startswith("atrib_") and isinstance(all_variables[var_name], pd.DataFrame):
-        atrib_names.append(var_name)
-
-# Agora, você pode iterar sobre a lista de nomes para criar o dicionário
-for df_name in atrib_names:
-    # Adiciona o DataFrame ao dicionário
-    atributos_dict[df_name] = all_variables[df_name]
+# Criar DataFrame a partir do dicionário de variáveis
+res_mean_var_atributos = pd.DataFrame(selected_variables)
 
 ########################################################################
 ########################################################################
 ########################################################################
 ## testes estatísticos
 
+# Definindo o índice
+res_mean_var_atributos = res_mean_var_atributos.T
+
+# Lista de atributos
+atributos = res_mean_var_atributos.index.tolist()
+modelos = res_mean_var_atributos.columns.tolist()
+
+# Inicializar valor_p fora do loop for
+valor_p = None
+
+# Loop for para testes t e F
+for modelo in modelos:
+    for atributo in atributos:
+        if atributo.startswith('mean_'):
+            temp = atributo.replace('mean_', 'var_')
+            media_amostra1 = res_mean_var_atributos.loc[atributo, 'well']
+            variancia_amostra1 = res_mean_var_atributos.loc[temp, 'well'] if temp in res_mean_var_atributos.columns else 0.2
+            tamanho_amostra1 = len(df)
+
+            media_amostra2 = res_mean_var_atributos.loc[atributo, modelo]
+            variancia_amostra2 = res_mean_var_atributos.loc[temp, modelo] if temp in res_mean_var_atributos.columns else 0.2
+            tamanho_amostra2 = len(df)
+
+            estatistica_t = (media_amostra1 - media_amostra2) / math.sqrt((variancia_amostra1 / tamanho_amostra1) + (variancia_amostra2 / tamanho_amostra2))
+
+            graus_de_liberdade = tamanho_amostra1 + tamanho_amostra2 - 2
+
+            p_valor = stats.t.sf(abs(estatistica_t), graus_de_liberdade) * 2
+
+            print(f"Comparação entre 'well' e '{atributo}' no modelo '{modelo}': p-valor = {p_valor}")
+
+        elif atributo.startswith('var_'):
+            variancia_amostra1 = res_mean_var_atributos.loc[atributo, 'well']
+            temp = atributo.replace('mean_', 'var_')
+            variancia_amostra2 = res_mean_var_atributos.loc[temp, modelo] if temp in res_mean_var_atributos.columns else 0.2
+
+            estatistica_F = variancia_amostra1 / variancia_amostra2
+
+            graus_liberdade1 = len(res_mean_var_atributos) - 1
+            graus_liberdade2 = len(res_mean_var_atributos) - 1
+
+            valor_p = stats.f.cdf(estatistica_F, graus_liberdade1, graus_liberdade2)
+
+            print(f"Comparação entre 'well' e '{atributo}' no modelo '{modelo}': p-valor = {valor_p}")
+
+        print(f"Comparação entre 'well' e '{atributo}' no modelo '{modelo}': Valor-p = {valor_p}")
+
+
+'''
 # Dicionário para armazenar os resultados dos testes
 statistical_tests_results = {}
 
