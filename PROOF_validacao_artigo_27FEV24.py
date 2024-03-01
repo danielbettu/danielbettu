@@ -17,8 +17,8 @@ inicio = time.time()
 
 # Carregar dados do arquivo de entrada em txt
 # df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
-# df = pd.read_csv('C:/Python/PROOF_pocos_validacao.csv', sep= ",", header= 0)
-df = pd.read_csv('/home/bettu/Documents/Python/PROOF/PROOF_pocos_validacao.csv', sep= ",", header= 0)
+df = pd.read_csv('C:/Python/PROOF_pocos_validacao.csv', sep= ",", header= 0)
+# df = pd.read_csv('/home/bettu/Documents/Python/PROOF/PROOF_pocos_validacao.csv', sep= ",", header= 0)
 
 #######################################################################
 #######################################################################
@@ -350,7 +350,10 @@ atributos = res_mean_var_atributos.index.tolist()
 modelos = res_mean_var_atributos.columns.tolist()
 
 # Inicializar valor_p fora do loop for
-valor_p = None
+p_valor_teste_F = None
+
+# Lista para armazenar DataFrames temporários
+resultados_temporarios = []
 
 # Loop for para testes t e F
 for modelo in modelos:
@@ -365,131 +368,101 @@ for modelo in modelos:
             variancia_amostra2 = res_mean_var_atributos.loc[temp, modelo] if temp in res_mean_var_atributos.columns else 0.2
             tamanho_amostra2 = len(df)
 
-            estatistica_t = (media_amostra1 - media_amostra2) / math.sqrt((variancia_amostra1 / tamanho_amostra1) + (variancia_amostra2 / tamanho_amostra2))
+            estatistica_t = abs(media_amostra1 - media_amostra2) / math.sqrt((variancia_amostra1 / tamanho_amostra1) + (variancia_amostra2 / tamanho_amostra2))
 
             graus_de_liberdade = tamanho_amostra1 + tamanho_amostra2 - 2
 
-            p_valor = stats.t.sf(abs(estatistica_t), graus_de_liberdade) * 2
+            p_valor_teste_t = stats.t.sf(abs(estatistica_t), graus_de_liberdade) * 2
 
-            print(f"Comparação entre 'well' e '{atributo}' no modelo '{modelo}': p-valor = {p_valor}")
+            # Criar DataFrame temporário
+            temp_df = pd.DataFrame({'Modelo': [modelo], 'Atributo': [atributo], 'Estatistica_T': [estatistica_t], 'p_valor_t': [p_valor_teste_t]})
 
         elif atributo.startswith('var_'):
+            # Calcule a variância da amostra para o atributo 'well'
             variancia_amostra1 = res_mean_var_atributos.loc[atributo, 'well']
-            temp = atributo.replace('mean_', 'var_')
-            variancia_amostra2 = res_mean_var_atributos.loc[temp, modelo] if temp in res_mean_var_atributos.columns else 0.2
-
+            
+            # Calcule a variância da amostra para o atributo 'modelo'
+            # Se o valor for menor que 0.2, defina como 0.2
+            variancia_amostra2 = res_mean_var_atributos.loc[atributo, modelo] if (res_mean_var_atributos.loc[atributo, modelo] >= 0.2) else 0.2
+            
+            # Calcule a estatística F
             estatistica_F = variancia_amostra1 / variancia_amostra2
+            
+            # Graus de liberdade
+            graus_liberdade1 = len(df) - 1
+            graus_liberdade2 = len(df) - 1
+            
+            # Calcule o valor-p do teste F
+            p_valor_teste_F = stats.f.cdf(estatistica_F, graus_liberdade1, graus_liberdade2)
+            
+            # Crie um DataFrame temporário
+            temp_df = pd.DataFrame({
+                'Modelo': [modelo],
+                'Atributo': [atributo],
+                'Estatistica_F': [estatistica_F],
+                'p_valor_F': [p_valor_teste_F]
+            })
+       
+        # Adicionar DataFrame temporário à lista
+        resultados_temporarios.append(temp_df)
 
-            graus_liberdade1 = len(res_mean_var_atributos) - 1
-            graus_liberdade2 = len(res_mean_var_atributos) - 1
-
-            valor_p = stats.f.cdf(estatistica_F, graus_liberdade1, graus_liberdade2)
-
-            print(f"Comparação entre 'well' e '{atributo}' no modelo '{modelo}': p-valor = {valor_p}")
-
-        print(f"Comparação entre 'well' e '{atributo}' no modelo '{modelo}': Valor-p = {valor_p}")
-
-
-'''
-# Dicionário para armazenar os resultados dos testes
-statistical_tests_results = {}
-
-# Loop sobre cada DataFrame no dicionário
-for df_name, df_atributos in atributos_dict.items():
-    # Lista para armazenar os resultados dos testes para cada par de modelo
-    resultados_modelos = []
-
-    # Loop sobre as colunas do DataFrame 
-    for col in df_atributos.columns[1:]:
-        # Obtém os dados do modelo de referência e do modelo atual
-        dados_referencia = df_atributos['well']
-        dados_modelo = df_atributos[col]
-
-        # Teste t (t-test)
-        t_statistic, t_p_value = ttest_ind(dados_referencia, dados_modelo)
-
-        # Teste F (ANOVA)
-        f_statistic, f_p_value = f_oneway(dados_referencia, dados_modelo)
-
-        # Armazena os resultados
-        resultados_modelos.append({
-            'modelo_referencia': 'well',
-            'modelo_atual': col,
-            't_statistic': t_statistic,
-            't_p_value': t_p_value,
-            'f_statistic': f_statistic,
-            'f_p_value': f_p_value
-        })
-
-    # Adiciona os resultados ao dicionário geral
-    statistical_tests_results[df_name] = resultados_modelos
-
-########################################################################
-########################################################################
-########################################################################
-## Organização dos resultados
-
-resultado_sintetizado = {}
-
-for atributo, modelos in statistical_tests_results.items():
-    resultado_sintetizado[atributo] = {}
-    for modelo in modelos:
-        modelo_atual = modelo['modelo_atual']
-        if modelo_atual not in resultado_sintetizado[atributo]:
-            resultado_sintetizado[atributo][modelo_atual] = {
-                't_statistic': [],
-                't_p_value': [],
-                'f_statistic': [],
-                'f_p_value': [],
-            }
-        resultado_sintetizado[atributo][modelo_atual]['t_statistic'].append(modelo['t_statistic'])
-        resultado_sintetizado[atributo][modelo_atual]['t_p_value'].append(modelo['t_p_value'])
-        resultado_sintetizado[atributo][modelo_atual]['f_statistic'].append(modelo['f_statistic'])
-        resultado_sintetizado[atributo][modelo_atual]['f_p_value'].append(modelo['f_p_value'])
-
-# Criando o DataFrame
-rows = []
-
-for atributo, modelos in resultado_sintetizado.items():
-    for modelo_atual, estatisticas in modelos.items():
-        row = {'atributo': atributo, 'modelo_atual': modelo_atual}
-        row.update({f'Média {key}': sum(values) / len(values) for key, values in estatisticas.items()})
-        rows.append(row)
-
-statistical_results_final = pd.DataFrame(rows)
-statistical_results_final.columns = statistical_results_final.columns.str.replace('Média ', '')
+# Concatenar todos os DataFrames temporários em um único DataFrame
+resultados_estatisticos_comparacao_well = pd.concat(resultados_temporarios, ignore_index=True)
 
 ########################################################################
 ########################################################################
 ########################################################################
 ## Combinação das probabilidades
 
-# Substituir valores nas colunas 't_p_value' e 'f_p_value'
-statistical_results_final['t_p_value'] = np.where(statistical_results_final['t_p_value'] < 0.0052, 0.0052, statistical_results_final['t_p_value'])
-statistical_results_final['t_p_value'] = np.where(statistical_results_final['t_p_value'] > 0.92151, 0.92151, statistical_results_final['t_p_value'])
-statistical_results_final['f_p_value'] = np.where(statistical_results_final['f_p_value'] < 0.0052, 0.0052, statistical_results_final['f_p_value'])
-statistical_results_final['f_p_value'] = np.where(statistical_results_final['f_p_value'] > 0.92151, 0.92151, statistical_results_final['f_p_value'])
- 
-# Lista de nomes de modelos únicos presentes na coluna 'modelo_atual'
-modelos = statistical_results_final['modelo_atual'].unique()
+# Dicionário para armazenar os dataframes
+resultados_estatisticos_consolidados = {}
 
-# Inicializar um DataFrame para armazenar os resultados
+# Itera pelos modelos
+for modelo in modelos:
+    # Filtra os dados para o modelo atual
+    dados_modelo = resultados_estatisticos_comparacao_well[resultados_estatisticos_comparacao_well['Modelo'] == modelo]
+    
+    # Cria o dataframe com os atributos e p_valor
+    df_modelo = pd.DataFrame({
+        'Atributo': atributos,
+        'p_valor': dados_modelo.apply(lambda row: row['p_valor_t'] if row['Atributo'].startswith('mean_') else row['p_valor_F'], axis=1)
+    })
+    
+    # Adiciona o dataframe ao dicionário
+    resultados_estatisticos_consolidados[modelo] = df_modelo
+    
+# Regra para ajustar os valores de p_valor
+def ajustar_p_valor(valor):
+    if valor < 0.0052:
+        return 0.0052
+    elif valor > 0.92151:
+        return 0.92151
+    else:
+        return valor
+
+# Itera pelos dataframes no dicionário
+for modelo, df_temp in resultados_estatisticos_consolidados.items():
+    df_temp['p_valor'] = df_temp['p_valor'].apply(ajustar_p_valor)    
+
+########################################################################
+########################################################################
+########################################################################
+## Combinação das probabilidades
+
+# Inicialize o DataFrame de resultados
 resultados = pd.DataFrame(columns=['modelo_atual', 'prob(U|E)', 'prob(nU|E)'])
 
-# Iterar sobre cada nome de modelo
-for modelo in modelos:
-    # Filtrar o DataFrame com base no 'modelo_atual'
-    sub_df = statistical_results_final[statistical_results_final['modelo_atual'] == modelo]
-
+# Itera pelos modelos
+for modelo, sub_df in resultados_estatisticos_consolidados.items():
     # Inicializar variáveis para armazenar o resultado do produtório
     prob_inicial = None
 
     # Iterar sobre cada linha do sub_df
     for index, row in sub_df.iterrows():
         # Calcular prob_adicional
-        prob_adicional = row['t_p_value'] if 't_p_value' in row else row['f_p_value']
+        prob_adicional = row['p_valor']
 
-        # Se prob_inicial ainda não foi definida, defina-a como a primeira ocorrência de t_p_value
+        # Se prob_inicial ainda não foi definida, defina-a como a primeira ocorrência de p_valor
         if prob_inicial is None:
             prob_inicial = prob_adicional
             continue
@@ -508,18 +481,22 @@ for modelo in modelos:
         # Usar a nova prob(U|E) normalizada como nova prob_inicial
         prob_inicial = prob_U_E
 
-    # Adicionar o resultado ao DataFrame de resultados
-    resultados = resultados.append({'modelo_atual': modelo, 'prob(U|E)': prob_U_E, 'prob(nU|E)': prob_nU_E}, ignore_index=True)
+    # Criar um novo DataFrame com os resultados do modelo atual
+    df_modelo = pd.DataFrame({'modelo_atual': [modelo], 'prob(U|E)': [prob_U_E], 'prob(nU|E)': [prob_nU_E]})
 
-resultados_intermediários = resultados.copy()
+    # Concatenar o novo DataFrame com o DataFrame de resultados
+    resultados = pd.concat([resultados, df_modelo], ignore_index=True)
+
+# Resultados intermediários
+resultados_intermediarios = resultados.copy()
 
 ######################################################
 # Subtrair um valor específico de 'resultado' e manter a primeira coluna de strings intacta
 valor_a_subtrair = 1
-resultados['prob(U|E)'] = np.where(resultados['prob(U|E)'].apply(type) == str, resultados['prob(U|E)'], valor_a_subtrair - resultados['prob(U|E)'] )
+resultados_intermediarios['prob(U|E)'] = np.where(resultados_intermediarios['prob(U|E)'].apply(type) == str, resultados_intermediarios['prob(U|E)'], valor_a_subtrair - resultados_intermediarios['prob(U|E)'] )
 
 # Atribuir o resultado a PROOF
-PROOF = resultados
+PROOF = resultados_intermediarios
 PROOF = PROOF.rename(columns={'prob(U|E)': 'PROOF'})
 PROOF = PROOF.drop('prob(nU|E)', axis=1)
 
@@ -542,19 +519,22 @@ for i, col in enumerate(cols):
     x = df[col]
     y = df['profundidade']
     
+    # Obtém o valor correspondente de PROOF para o modelo atual
+    modelo_atual = col.replace('_comp', '')  # Remove '_comp' do nome da coluna
+    proof_value = PROOF.loc[PROOF['modelo_atual'] == modelo_atual, 'PROOF'].values[0]
+    
     # Cria o gráfico de barras com as cores correspondentes
     axs[i].barh(y, x, color=[cores[val] for val in x])
     
     # Inverte o eixo y para que a profundidade aumente para baixo
     axs[i].invert_yaxis()
     
-    # Define o título do subplot
-    axs[i].set_title(col)
+    # Define o título do subplot com o valor de PROOF (3 casas decimais)
+    axs[i].set_title(f"{col} (PROOF: {proof_value:.3f})")
     
-    # Define o intervalo do eixos
-    axs[i].set_yticks(np.arange(0, max(y)+1, 1))  # Intervalo de 1 uni
-    axs[i].set_xticks(np.arange(0, max(x)+1, 1))  # Intervalo de 1 uni
-
+    # Define os intervalos dos eixos
+    axs[i].set_yticks(np.arange(0, max(y) + 1, 1))
+    axs[i].set_xticks(np.arange(0, max(x) + 1, 1))
 # Mostra a figura
 plt.tight_layout()
 plt.show()
@@ -564,4 +544,3 @@ fim = time.time()
 # Calcula a diferença
 tempo_decorrido = fim - inicio
 print(f"O tempo decorrido foi de {tempo_decorrido} segundos.")
-'''
