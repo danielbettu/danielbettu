@@ -11,14 +11,21 @@ import numpy as np
 import math
 import statistics
 
-
-
 # Carregar dados do arquivo de entrada em txt
 # df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
 df = pd.read_csv('C:/Python/eaton_Gov_Gp_Gc_Gf.csv', sep= ";", header= 0)
 
 # Criando o dataframe 'dados' com os dados numéricos
-dados = df.iloc[1:].apply(pd.to_numeric, errors='coerce')
+dados = df.copy()
+
+plt.figure(figsize=(36,6))
+plt.plot(dados['Prof'], dados['DT'])  
+plt.xlabel('Profundidade (m)')
+plt.ylabel('Gradiente de pressão de poros (lbf/gal)')
+plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
+plt.legend()  # Adicionar legenda ao gráfico
+plt.show()
+plt.close()
 
 #####################################
 
@@ -38,19 +45,17 @@ coef_b = 0.25 # coef de Gardner
 # Realizar a correlação de Gardner
 
 dens_formacao = perform_gardner_correl(dados.iloc[:,1], coef_a, coef_b)
+dens_formacao.name = 'densidade'
+
 
 # Plotar resultado da densidade da fm
 profundidade = dados.loc[:, "Prof"]
-plt.figure(figsize=(12,12))
+plt.figure(figsize=(36,6))
 plt.plot(profundidade, dens_formacao)
+plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
 plt.xlabel('Profundidade (m)')
 plt.ylabel('Densidade da Formação (g/cm$^{3}$)')
 plt.show()
-
-# Perguntar a profundidade de início da subcompactação
-topo_subcomp = float(input("Qual é a profundidade de início da subcompactação? "))
-# topo_subcomp = 3000
-print("A profundidade de início da subcompactação é:", topo_subcomp, ' m')
 
 # Limpar a tela de plotagem
 plt.clf()
@@ -59,38 +64,52 @@ plt.clf()
 # Gradiente de sobrecarga
 
 # Definição das variáveis
-dens_agua = 1.05 # g/cm3 
+dens_agua = 1.03 # g/cm3 
 lamina_agua = 1000 # m
  
 # cálculo de espessuras
 # Calcular a diferença entre a linha atual e a próxima
 espessura_camada = profundidade.diff()
+espessura_camada.name = 'espessura'
 # A primeira linha não tem uma linha anterior, então vamos preencher o NaN com o cálculo desejado
 espessura_camada.iloc[0] = (profundidade.iloc[0]-lamina_agua)
 
-# A última linha não tem uma próxima linha, então vamos preencher o NaN com a diferença para a profundidade anterior
-espessura_camada.iloc[-1] = profundidade.iloc[-1] - profundidade.iloc[-2]
+# # A última linha não tem uma próxima linha, então vamos preencher o NaN com a diferença para a profundidade anterior
+# espessura_camada.iloc[-1] = profundidade.iloc[-1] - profundidade.iloc[-2]
 
 # Realizar o cálculo do gradiente de sobrecarga
 
 tensao_camada = 1.422 * (espessura_camada * dens_formacao)
+tensao_camada.name = 'tensao_camada'
 tensao_lamina_agua = 1.422 * (lamina_agua * dens_agua)
 tensao_sobrecarga = tensao_lamina_agua + tensao_camada.cumsum() 
+tensao_sobrecarga.name = 'tensao_sobrecarga'
 gradiente_sobrecarga = tensao_sobrecarga / (0.1704 * profundidade)
+gradiente_sobrecarga.name = 'Gov'
+
 
 # Plotar 
-plt.figure(figsize=(12,12))
+plt.figure(figsize=(36,6))
 plt.plot(profundidade, gradiente_sobrecarga)  
 plt.xlabel('Profundidade (m)')
 plt.ylabel('Gradiente sobrecarga (lbf/gal)')
+plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
+# plotagem alternativa
+# plt.plot(profundidade, tensao_sobrecarga)  
+# plt.xlabel('Profundidade (m)')
+# plt.ylabel('Tensão sobrecarga (psi)')
+plt.show()
 
-# Limpar a tela de plotagem
-input("Pressione Enter para continuar...")
-plt.clf()
-
-
+plt.close()
 
 #################### Cálculo da tendência linear de compactação
+#################### Para aplicar a Equação de Eaton para estimar o Gp
+
+# Perguntar a profundidade de início da subcompactação
+# topo_subcomp = float(input("Qual é a profundidade de início da subcompactação? "))
+topo_subcomp = 3000
+print("A profundidade de início da subcompactação é:", topo_subcomp, ' m')
+
 # Encontrar o índice da menor profundidade até 'topo_subcomp'
 indices = (dados.iloc[:, 0] <= topo_subcomp)
 prof_regression = dados.loc[indices, dados.columns[0]] # cria uma série com prof menor que topo_subcomp
@@ -99,55 +118,74 @@ DT_regression = dados.loc[indices, dados.columns[1]] # cria uma série com DT me
 # Realizar a regressão linear
 slope, intercept = statistics.linear_regression(prof_regression, DT_regression)
 
-# plt.plot(profundidade, dens_formacao)
-# plt.show()
-
-# OLD x, y_pred, linear_regressor = perform_linear_regression(dados.loc[indices])
-
 # Reshape your data
 deltaT_medido = dados["DT"]
 
 # Use the DataFrame for prediction
 deltaT_esperado = (slope * profundidade) + intercept
+diff_deltaT = deltaT_medido - deltaT_esperado
+
+plt.close()
+plt.figure(figsize=(36,6))
+plt.plot(profundidade , diff_deltaT)
+plt.xlabel('Profundidade (m)')
+plt.ylabel('Diferença da Vagarosidade medida X estimada ($\\mu$S/ft)')
+plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
+plt.legend()  # Adicionar legenda ao gráfico
+plt.show()
+plt.close()
 
 # Plotar dados e reta de tendência
-plt.figure(figsize=(12,12))
+plt.figure(figsize=(36,6))
 plt.plot(dados.iloc[:, 0], dados.iloc[:, 1], label='Dados originais')
 plt.plot(profundidade , deltaT_esperado, color='red', label='Linha de tendência')  # Adicionar a linha de tendência ao gráfico
 plt.xlabel('Profundidade (m)')
 plt.ylabel('Vagarosidade estimada ($\\mu$S/ft)')
 plt.legend()  # Adicionar legenda ao gráfico
+plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
 plt.show()
 
 # Imprimir na tela a equação da reta 
 print("A equação da linha de tendência é: y = ", slope, " * prof ", " + ", intercept)
 
-# Limpar a tela de plotagem
-input("Pressione Enter para continuar...")
-plt.clf()
-
-
-
+plt.close()
 
 ###################
 # Estimativa de gradiente de pressão de poros - gradiente_poros
 #gradiente_sobrecarga = gradiente_sobrecarga.to_frame()
 gradiente_agua = tensao_lamina_agua/(0.1704 * lamina_agua)
-gradiente_poros = gradiente_sobrecarga - ((gradiente_sobrecarga - gradiente_agua) * (deltaT_esperado/deltaT_medido)**2)
+gradiente_poros = gradiente_sobrecarga - ((gradiente_sobrecarga - gradiente_agua) * ((deltaT_esperado/deltaT_medido)**2))
 
+plt.figure(figsize=(36,6))
+plt.plot(profundidade, gradiente_poros)  
+plt.xlabel('Profundidade (m)')
+plt.ylabel('Gradiente de pressão de poros (lbf/gal)')
+plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
+plt.legend()  # Adicionar legenda ao gráfico
+plt.show()
+plt.close()
 
 ###################
 # Estimativa de gradiente de pressão de colapso
 
-C0 = 5000
-phi = 55 #graus
+C0 = 1550
+alpha = 55 #graus
 tensao_hor_max = dados['TH']
 tensao_hor_min = dados['Th']
 pressao_poros_estimada = gradiente_poros * 0.1704 * profundidade
-tan2phi = (math.tan((math.pi / 4) + (phi * (math.pi / 180))))**2
+tan2phi = (math.tan((math.pi / 4) + (alpha * (math.pi / 180))))**2
 pressao_colapso_min = ((3 * tensao_hor_max) - tensao_hor_min - C0 + (pressao_poros_estimada * ( tan2phi - 1))) / tan2phi + 1
 gradiente_colapso = pressao_colapso_min / (0.1704 * profundidade)
 
+plt.figure(figsize=(36,6))
+plt.plot(profundidade, pressao_poros_estimada)  
+plt.xlabel('Profundidade (m)')
+plt.ylabel('Pressão de poros estimada (psi)')
+plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
+plt.legend()  # Adicionar legenda ao gráfico
+plt.show()
+plt.close()
+'''
 ###################
 # Estimativa de gradiente de fratura
 # Gf = K (Gov – Gpp) + Gpp
@@ -269,3 +307,4 @@ plt.plot(x_linha2, y_linha2, label='Limite para cisalhamento')
 plt.gca().set_aspect('equal', adjustable='box')
 plt.legend()
 plt.show()
+'''
