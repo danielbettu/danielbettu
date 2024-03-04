@@ -13,17 +13,17 @@ import statistics
 
 # Carregar dados do arquivo de entrada em txt
 # df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
-df = pd.read_csv('C:/Python/eaton_Gov_Gp_Gc_Gf.csv', sep= ";", header= 0)
+# df = pd.read_csv('C:/Python/eaton_Gov_Gp_Gc_Gf.csv', sep= ";", header= 0)
+df = pd.read_csv('/home/bettu/Documents/Python/Geomecanica/eaton_Gov_Gp_Gc_Gf.csv', sep= ",", header= 0)
 
 # Criando o dataframe 'dados' com os dados numéricos
 dados = df.copy()
 
-plt.figure(figsize=(36,6))
+plt.figure(figsize=(18,2))
 plt.plot(dados['Prof'], dados['DT'])  
 plt.xlabel('Profundidade (m)')
 plt.ylabel('Gradiente de pressão de poros (lbf/gal)')
 plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
-plt.legend()  # Adicionar legenda ao gráfico
 plt.show()
 plt.close()
 
@@ -50,7 +50,7 @@ dens_formacao.name = 'densidade'
 
 # Plotar resultado da densidade da fm
 profundidade = dados.loc[:, "Prof"]
-plt.figure(figsize=(36,6))
+plt.figure(figsize=(18,2))
 plt.plot(profundidade, dens_formacao)
 plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
 plt.xlabel('Profundidade (m)')
@@ -89,7 +89,7 @@ gradiente_sobrecarga.name = 'Gov'
 
 
 # Plotar 
-plt.figure(figsize=(36,6))
+plt.figure(figsize=(18,2))
 plt.plot(profundidade, gradiente_sobrecarga)  
 plt.xlabel('Profundidade (m)')
 plt.ylabel('Gradiente sobrecarga (lbf/gal)')
@@ -126,22 +126,20 @@ deltaT_esperado = (slope * profundidade) + intercept
 diff_deltaT = deltaT_medido - deltaT_esperado
 
 plt.close()
-plt.figure(figsize=(36,6))
+plt.figure(figsize=(18,2))
 plt.plot(profundidade , diff_deltaT)
 plt.xlabel('Profundidade (m)')
 plt.ylabel('Diferença da Vagarosidade medida X estimada ($\\mu$S/ft)')
 plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
-plt.legend()  # Adicionar legenda ao gráfico
 plt.show()
 plt.close()
 
 # Plotar dados e reta de tendência
-plt.figure(figsize=(36,6))
+plt.figure(figsize=(18,2))
 plt.plot(dados.iloc[:, 0], dados.iloc[:, 1], label='Dados originais')
 plt.plot(profundidade , deltaT_esperado, color='red', label='Linha de tendência')  # Adicionar a linha de tendência ao gráfico
 plt.xlabel('Profundidade (m)')
 plt.ylabel('Vagarosidade estimada ($\\mu$S/ft)')
-plt.legend()  # Adicionar legenda ao gráfico
 plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
 plt.show()
 
@@ -156,47 +154,60 @@ plt.close()
 gradiente_agua = tensao_lamina_agua/(0.1704 * lamina_agua)
 gradiente_poros = gradiente_sobrecarga - ((gradiente_sobrecarga - gradiente_agua) * ((deltaT_esperado/deltaT_medido)**2))
 
-plt.figure(figsize=(36,6))
+plt.figure(figsize=(18,2))
 plt.plot(profundidade, gradiente_poros)  
 plt.xlabel('Profundidade (m)')
 plt.ylabel('Gradiente de pressão de poros (lbf/gal)')
 plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
-plt.legend()  # Adicionar legenda ao gráfico
 plt.show()
 plt.close()
 
 ###################
 # Estimativa de gradiente de pressão de colapso
 
-C0 = 1550
-alpha = 55 #graus
+C0 = 4550
+alpha = 70 #graus
 tensao_hor_max = dados['TH']
 tensao_hor_min = dados['Th']
 pressao_poros_estimada = gradiente_poros * 0.1704 * profundidade
-tan2phi = (math.tan((math.pi / 4) + (alpha * (math.pi / 180))))**2
-pressao_colapso_min = ((3 * tensao_hor_max) - tensao_hor_min - C0 + (pressao_poros_estimada * ( tan2phi - 1))) / tan2phi + 1
-gradiente_colapso = pressao_colapso_min / (0.1704 * profundidade)
+# tan2phi = (math.tan((math.pi / 4) + (alpha * (math.pi / 180))))**2
+tan2phi = math.tan(math.pi/4 + ((np.deg2rad(alpha))/2))**2
+pressao_minima_colapso = ((3 * tensao_hor_max) - tensao_hor_min - C0 + (pressao_poros_estimada * ( tan2phi - 1))) / tan2phi + 1
+gradiente_colapso = pressao_minima_colapso / (0.1704 * profundidade)
 
-plt.figure(figsize=(36,6))
+plt.figure(figsize=(18,2))
 plt.plot(profundidade, pressao_poros_estimada)  
 plt.xlabel('Profundidade (m)')
 plt.ylabel('Pressão de poros estimada (psi)')
 plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
-plt.legend()  # Adicionar legenda ao gráfico
 plt.show()
 plt.close()
-'''
+
+plt.figure(figsize=(18,2))
+plt.plot(profundidade, gradiente_colapso)  
+plt.xlabel('Profundidade (m)')
+plt.ylabel('Gradiente de Colapso (lbf/gal)')
+plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
+plt.show()
+plt.close()
+
 ###################
 # Estimativa de gradiente de fratura
-# Gf = K (Gov – Gpp) + Gpp
-coef_poisson = dados['Poisson']
-coef_K = coef_poisson / 1 - coef_poisson
-gradiente_fratura = (coef_poisson * (gradiente_sobrecarga - gradiente_poros)) + gradiente_poros
+# Gf = K (Gov – Gpp) + Gpp pag 322 Rocha e Azevedo
 
-# plt.plot(profundidade, gradiente_colapso)
-# plt.plot(profundidade, gradiente_poros)
-# plt.plot(profundidade, gradiente_sobrecarga)
-# plt.plot(profundidade, gradiente_fratura)
+coef_poisson = dados['Poisson']
+coef_K = coef_poisson / (1 - coef_poisson) # pág 324 Rocha e Azevedo
+# coef_K_alt = (dados['Th']-pressao_poros_estimada)/(tensao_sobrecarga-pressao_poros_estimada)
+gradiente_fratura = gradiente_poros + (coef_K * (gradiente_sobrecarga - gradiente_poros))
+
+plt.figure(figsize=(18,2))
+plt.plot(profundidade, gradiente_fratura)  
+plt.xlabel('Profundidade (m)')
+plt.ylabel('Gradiente de Fratura (lbf/gal)')
+plt.grid(which='both', linestyle='--', linewidth=0.5, axis='both', color='gray')
+plt.show()
+plt.close()
+
 
 ###################
 # Plotagem do gráfico
@@ -205,10 +216,10 @@ fig, ax = plt.subplots()
 
 plt.figure(figsize=(12,12))
 # Plotagem das curvas
-ax.plot(gradiente_colapso, profundidade, label='Gradiente de Colapso')
-ax.plot(gradiente_poros, profundidade, label='Gradiente de Poros')
-ax.plot(gradiente_sobrecarga, profundidade, label='Gradiente de Sobrecarga')
-ax.plot(gradiente_fratura, profundidade, label='Gradiente de Fratura')
+ax.plot(gradiente_colapso, profundidade, label='Gradiente de Colapso', color='red')
+ax.plot(gradiente_poros, profundidade, label='Gradiente de Poros', color = 'green')
+ax.plot(gradiente_sobrecarga, profundidade, label='Gradiente de Sobrecarga', color = 'blue')
+ax.plot(gradiente_fratura, profundidade, label='Gradiente de Fratura', color = 'black')
 
 # Preenchimento da área entre as curvas gradiente_colapso e gradiente_sobrecarga
 ax.fill_betweenx(profundidade, gradiente_colapso, gradiente_fratura, color='yellow', alpha=0.3)
@@ -223,14 +234,10 @@ ax.set_ylabel('Profundidade (m)')
 # Exibição da plotagem
 plt.show()
 
-# Limpar a tela de plotagem
-input("Pressione Enter para continuar...")
-plt.clf()
+plt.close()
 
 ###################
 # Plotagem de Círculo de Mohr
-
-
 
 # Definindo a prof de interesse para o círculo de mohr
 # prof_interesse = 4000 
@@ -290,7 +297,6 @@ limite_tracao_mohr = -1200 # psi
 plt.figure(figsize=(12,12))
 plt.plot(x, y)
 
-
 # Adicione os eixos x e y
 plt.axhline(0, color='black',linewidth=0.5)
 plt.axvline(0, color='black',linewidth=0.5)
@@ -307,4 +313,3 @@ plt.plot(x_linha2, y_linha2, label='Limite para cisalhamento')
 plt.gca().set_aspect('equal', adjustable='box')
 plt.legend()
 plt.show()
-'''
