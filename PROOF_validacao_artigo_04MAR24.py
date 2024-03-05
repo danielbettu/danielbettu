@@ -16,8 +16,8 @@ inicio = time.time()
 
 # Carregar dados do arquivo de entrada em txt
 # df = pd.read_csv('https://raw.githubusercontent.com/danielbettu/danielbettu/main/eaton_Gov_Gp_Gc_Gf.txt', sep= "\t", header=None)
-# df = pd.read_csv('C:/Python/PROOF_pocos_validacao.csv', sep= ",", header= 0)
-df = pd.read_csv('/home/bettu/Documents/Python/PROOF/PROOF_pocos_validacao.csv', sep= ",", header= 0)
+df = pd.read_csv('C:/Python/PROOF_pocos_validacao.csv', sep= ";", header= 0)
+# df = pd.read_csv('/home/bettu/Documents/Python/PROOF/PROOF_pocos_validacao.csv', sep= ",", header= 0)
 
 list_text = [col for col in df.columns if "_text" in col]
 list_comp = [col for col in df.columns if "_comp" in col]
@@ -254,15 +254,17 @@ for intervalo in intervalos:
     df_temp.reset_index(inplace=True)
     dataframes[f'pre_{intervalo}'] = df_temp
 
-mean_trend_text_UP = dataframes['pre_text_trend_group1']
-mean_trend_text_UP.set_index('Model', inplace=True)
-first_index = mean_trend_text_UP.index[0] # Obtenha o nome do índice da primeira linha
-mean_trend_text_UP.drop(first_index, inplace=True) # Remova a primeira linha
+pre_mean_trend_text_UP = dataframes['pre_text_trend_group1']
+pre_mean_trend_text_UP.set_index('Model', inplace=True)
+first_index = pre_mean_trend_text_UP.index[0] # Obtenha o nome do índice da primeira linha
+pre_mean_trend_text_UP.drop(first_index, inplace=True) # Remova a primeira linha
+mean_trend_text_UP = pre_mean_trend_text_UP['Value']
 
-mean_trend_text_LW = dataframes['pre_text_trend_group2']
-mean_trend_text_LW.set_index('Model', inplace=True)
-first_index = mean_trend_text_LW.index[0] # Obtenha o nome do índice da primeira linha
-mean_trend_text_LW.drop(first_index, inplace=True) # Remova a primeira linha
+pre_mean_trend_text_LW = dataframes['pre_text_trend_group2']
+pre_mean_trend_text_LW.set_index('Model', inplace=True)
+first_index = pre_mean_trend_text_LW.index[0] # Obtenha o nome do índice da primeira linha
+pre_mean_trend_text_LW.drop(first_index, inplace=True) # Remova a primeira linha
+mean_trend_text_LW = pre_mean_trend_text_LW['Value']
 
 # # ########################################################################
 # # ########################################################################
@@ -351,37 +353,56 @@ for modelo in modelos:
         if atributo.startswith('mean_'):
             temp = atributo.replace('mean_', 'var_')
             media_amostra1 = res_mean_var_atributos.loc[atributo, 'well']
-            if temp in res_mean_var_atributos.columns:
+            if temp in res_mean_var_atributos.index:
                 variancia_amostra1 = res_mean_var_atributos.loc[temp, 'well']
                 if variancia_amostra1 < 0.2:
                     variancia_amostra1 = 0.2
             else:
                 variancia_amostra1 = 0.2
             tamanho_amostra1 = len(df)
-
+            
             media_amostra2 = res_mean_var_atributos.loc[atributo, modelo]
-            variancia_amostra2 = res_mean_var_atributos.loc[temp, modelo] if temp in res_mean_var_atributos.columns else 0.2
+            if temp in res_mean_var_atributos.index:
+                variancia_amostra2 = res_mean_var_atributos.loc[temp, modelo]
+                if variancia_amostra2 < 0.2:
+                    variancia_amostra2 = 0.2
             tamanho_amostra2 = len(df)
 
-            estatistica_t = abs(media_amostra1 - media_amostra2) / math.sqrt((variancia_amostra1 / tamanho_amostra1) + (variancia_amostra2 / tamanho_amostra2))
-
+            # Teste t alternativo            
+            # estatistica_t = abs(media_amostra1 - media_amostra2) / math.sqrt((variancia_amostra1 / tamanho_amostra1) + (variancia_amostra2 / tamanho_amostra2))
+            # graus_de_liberdade = tamanho_amostra1 + tamanho_amostra2 - 2
+            # p_valor_teste_t = stats.t.sf(abs(estatistica_t), graus_de_liberdade) * 2
+            
+            #### Teste t relatório
+            estatistica_t = abs(media_amostra1 - media_amostra2) / math.sqrt((variancia_amostra1 + variancia_amostra2)/(2*(tamanho_amostra1-1)))
             graus_de_liberdade = tamanho_amostra1 + tamanho_amostra2 - 2
-
             p_valor_teste_t = stats.t.sf(abs(estatistica_t), graus_de_liberdade) * 2
-
+            
             # Criar DataFrame temporário
             temp_df = pd.DataFrame({'Modelo': [modelo], 'Atributo': [atributo], 'Estatistica_T': [estatistica_t], 'p_valor_t': [p_valor_teste_t]})
 
         elif atributo.startswith('var_'):
             # Calcule a variância da amostra para o atributo 'well'
             variancia_amostra1 = res_mean_var_atributos.loc[atributo, 'well']
+            if variancia_amostra1 < 0.2:
+                variancia_amostra1 = 0.2
             
             # Calcule a variância da amostra para o atributo 'modelo'
             # Se o valor for menor que 0.2, defina como 0.2
             variancia_amostra2 = res_mean_var_atributos.loc[atributo, modelo] if (res_mean_var_atributos.loc[atributo, modelo] >= 0.2) else 0.2
+            if variancia_amostra2 < 0.2:
+                variancia_amostra2 = 0.2
             
             # Calcule a estatística F
-            estatistica_F = variancia_amostra1 / variancia_amostra2
+            if variancia_amostra1 >= variancia_amostra2:
+                estatistica_F = variancia_amostra1 / variancia_amostra2
+            else:
+                estatistica_F = variancia_amostra2 / variancia_amostra1
+                
+            if estatistica_F >= 3.2:
+                estatistica_F = 3.2
+            if estatistica_F <= 1.2:
+                estatistica_F = 1.2
             
             # Graus de liberdade
             graus_liberdade1 = len(df) - 1
