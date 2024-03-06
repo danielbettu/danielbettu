@@ -135,44 +135,48 @@ var_bat.index = var_bat.index.str.replace('_bat', '')
 ########################################################################
 ########################################################################
 ########################################################################
-## espessura média das camadas no poço
+## raiz quadrada da espessura média das camadas no poço
 
+# Cria uma cópia de df
+df_change = df.copy()
+
+# Colunas de interesse
 cols = list_comp.copy()
 
-# Função para contar sequências consecutivas
-def count_sequences(s):
-    return (s != s.shift()).cumsum().value_counts()
+# DataFrame para armazenar a soma das espessuras para cada intervalo de valores sucessivos iguais
+sum_thickness_df = pd.DataFrame()
 
-# Dicionário para armazenar os valores médios
-dict_mean_values = {}
-temp_dfs = {}  # Dicionário para armazenar os DataFrames temporários
-
+# Loop sobre as colunas
 for col in cols:
-    # Calcula as sequências para cada coluna
-    sequences = count_sequences(df[col])
-    
-    # Calcula a espessura acumulada para cada sequência
-    accumulated_thickness = sequences * df['espessura']
-    
-    # Calcula a raiz quadrada da espessura acumulada
-    sqrt_accumulated_thickness = np.sqrt(accumulated_thickness)
-    
-    # Calcula a média da raiz quadrada da espessura
-    dict_mean_values[col] = sqrt_accumulated_thickness.mean()
-    
-    # Cria um DataFrame temporário para cada coluna
-    temp_dfs[col] = pd.DataFrame({
-        'Sequences': sequences,
-        'Accumulated_Thickness': accumulated_thickness,
-        'Sqrt_Thickness': sqrt_accumulated_thickness
-    })
+    # Verifica se há uma mudança de valor
+    change = df_change[col] != df_change[col].shift()
 
-# Cria uma série com os valores médios
-mean_sqrt_thickness = pd.Series(dict_mean_values)
+    # Identifica os intervalos de valores sucessivos iguais
+    intervals = change.cumsum()
+
+    # Soma o valor de df_change['espessura'] para cada intervalo de valores sucessivos iguais
+    sum_thickness = pd.DataFrame()  # Inicializa um DataFrame vazio
+    for interval in intervals.unique():
+        sum_thickness_interval = df_change.loc[intervals == interval, 'espessura'].sum()
+        
+        # Concatena o valor atual com o DataFrame anterior
+        sum_thickness = pd.concat([sum_thickness, pd.DataFrame([sum_thickness_interval])])
+
+    # Cria um DataFrame com a soma das espessuras para cada intervalo de valores sucessivos iguais
+    sum_thickness_df_col = pd.DataFrame(sum_thickness.values, columns=[col])
+
+    # Concatena o DataFrame atual com o DataFrame anterior
+    sum_thickness_df = pd.concat([sum_thickness_df, sum_thickness_df_col], axis=1)
+
+# Calcula a raiz quadrada dos valores das espessuras acumuladas em cada intervalo
+sqrt_thickness = np.sqrt(sum_thickness_df) # para conferência
+
+# Calcula a média dos valores da raiz quadrada das espessuras
+mean_sqrt_thickness = sqrt_thickness.mean()
+
+# Cria uma série com a média das raízes quadradas das espessuras
+mean_sqrt_thickness = pd.Series(mean_sqrt_thickness, name='mean_sqrt_thickness')
 mean_sqrt_thickness.index = mean_sqrt_thickness.index.str.replace('_comp', '')
-
-# Combine os DataFrames temporários em um único DataFrame
-combined_temp_df = pd.concat(temp_dfs.values(), axis=1)
 
 #######################################################################
 #######################################################################
@@ -271,45 +275,42 @@ mean_trend_text_LW = pre_mean_trend_text_LW['Value']
 # # ########################################################################
 # # ## Variabilidade litológica - frequência de transição de litologia
 
-# Create a copy of df_litho_change
-df_litho_change = df.copy()
+# Cria uma cópia de df
+df_change = df.copy()
 
-# List to store temporary DataFrames
+# Lista para armazenar DataFrames temporários
 temp_dfs = []
 
-# Columns of interest
+# Colunas de interesse
 cols = list_comp.copy()
 
-# Loop over the columns
+# Loop sobre as colunas
 for col in cols:
-    # Calculate the difference between each value and the previous value within each group
-    diff_by_layer = df_litho_change[col].diff()
+    # Verifica se há uma mudança de valor
+    change = df_change[col] != df_change[col].shift()
 
-    # Disregard the first row of each layer
-    diff_by_layer[df_litho_change['layer'] != df_litho_change['layer'].shift()] = 0
+    # Conta o número de mudanças
+    change_count = change.sum()
 
-    # Count the number of changes within each layer
-    change_count_by_layer = diff_by_layer.ne(0).sum()
-
-    # Create a temporary DataFrame with an index
+    # Cria um DataFrame temporário com um índice
     temp_df = pd.DataFrame({
-        f'{col}_change_count_by_layer': change_count_by_layer
-    }, index=df_litho_change.index)
+        f'{col}_change_count': change_count
+    }, index=df_change.index)
 
-    # Add the temporary DataFrame to the list
+    # Adiciona o DataFrame temporário à lista
     temp_dfs.append(temp_df)
 
-# Combine the temporary DataFrames into a single DataFrame
-atrib_variab_litho = pd.concat(temp_dfs, axis=1)
-atrib_variab_litho.columns = atrib_variab_litho.columns.str.replace('_comp_change_count_by_layer', '')
-atrib_variab_litho = atrib_variab_litho.T
-numero_transicoes = atrib_variab_litho[0].squeeze()
+# Combina os DataFrames temporários em um único DataFrame
+atrib_variab = pd.concat(temp_dfs, axis=1)
+atrib_variab.columns = atrib_variab.columns.str.replace('_comp_change_count', '')
+atrib_variab = atrib_variab.T
+numero_transicoes = atrib_variab[0].squeeze()
 numero_transicoes -= 1
 # Calcula o comprimento da série (número de elementos)
 length_numero_transicoes = len(df)
-# Calcula a nova série 'mean_litho_trans'
-mean_litho_trans = numero_transicoes / (length_numero_transicoes - 1)
-var_litho_trans = mean_litho_trans * (1 - mean_litho_trans)
+# Calcula a nova série 'mean_trans'
+mean_trans = numero_transicoes / (length_numero_transicoes - 1)
+var_trans = mean_trans * (1 - mean_trans)
 
 ########################################################################
 ########################################################################
@@ -349,28 +350,39 @@ resultados_temporarios = []
 
 # Loop for para testes t e F
 for modelo in modelos:
+    
     for atributo in atributos:
+        
         if atributo.startswith('mean_'):
             temp = atributo.replace('mean_', 'var_')
             media_amostra1 = res_mean_var_atributos.loc[atributo, 'well']
+            
             if temp in res_mean_var_atributos.index:
                 variancia_amostra1 = res_mean_var_atributos.loc[temp, 'well']
+                
                 if variancia_amostra1 < 0.2:
                     variancia_amostra1 = 0.2
+                    
             else:
                 variancia_amostra1 = 0.2
+                
             tamanho_amostra1 = len(df)
             
             media_amostra2 = res_mean_var_atributos.loc[atributo, modelo]
+            
             if temp in res_mean_var_atributos.index:
                 variancia_amostra2 = res_mean_var_atributos.loc[temp, modelo]
+                
                 if variancia_amostra2 < 0.2:
                     variancia_amostra2 = 0.2
+            else:
+                variancia_amostra2 = 0.2
+                    
             tamanho_amostra2 = len(df)
             
-            # apenas para evitar 0 no numerador do modelo de teste de referência
-            if media_amostra1 == media_amostra2:
-                media_amostra2 = media_amostra1 * 0.95
+            # # apenas para evitar 0 no numerador do modelo de teste de referência            
+            # if media_amostra1 == media_amostra2:
+            #     media_amostra2 = media_amostra1 * 0.95
 
             # Teste t alternativo            
             # estatistica_t = abs(media_amostra1 - media_amostra2) / math.sqrt((variancia_amostra1 / tamanho_amostra1) + (variancia_amostra2 / tamanho_amostra2))
@@ -556,7 +568,7 @@ for i, col in enumerate(cols):
     # Define os intervalos dos eixos
     axs[i].set_yticks(np.arange(0, max(y) + 1, 1))
     axs[i].set_xticks(np.arange(0, max(x) + 1, 1))
-# Mostra a figura
+    
 plt.tight_layout()
 plt.show()
 
